@@ -13,7 +13,7 @@ function getTraceContextExtractor() {
 }
 //#endregion
 //#region node_modules/@supabase/supabase-js/dist/index.mjs
-var version = "2.114.0";
+var version = "2.117.1";
 var JS_ENV = "";
 var JS_RUNTIME_VERSION;
 if (typeof Deno !== "undefined") {
@@ -319,6 +319,21 @@ function normalizeTracePropagation(value) {
 function ensureTrailingSlash(url) {
 	return url.endsWith("/") ? url : url + "/";
 }
+var warnedTopLevelSchema = false;
+/**
+* Warn (once per process) when `schema` is passed at the top level of the client options
+* instead of under `db`. A top-level `schema` is not part of the options shape and is
+* ignored, so queries silently go to the default schema. Never throws.
+*
+* Only `undefined` counts as unset, matching `db.schema`, where any other value is sent
+* as the profile header.
+*/
+function checkTopLevelSchemaOption(options) {
+	if (warnedTopLevelSchema) return;
+	if (typeof options !== "object" || options === null || !("schema" in options) || options.schema === void 0) return;
+	warnedTopLevelSchema = true;
+	console.warn("@supabase/supabase-js: The \"schema\" option must be nested under \"db\", e.g. createClient(url, key, { db: { schema: 'myschema' } }). A top-level \"schema\" is ignored and queries go to the default schema.");
+}
 function applySettingDefaults(options, defaults) {
 	var _DEFAULT_GLOBAL_OPTIO, _globalOptions$header, _ref, _tracePropagationOpti, _ref2, _tracePropagationOpti2;
 	const { db: dbOptions, auth: authOptions, realtime: realtimeOptions, global: globalOptions } = options;
@@ -590,6 +605,7 @@ var SupabaseClient = class {
 		const baseUrl = validateSupabaseUrl(supabaseUrl);
 		if (!supabaseKey) throw new Error("supabaseKey is required.");
 		checkApiKeyFormat(supabaseKey);
+		checkTopLevelSchemaOption(options);
 		this.realtimeUrl = new URL("realtime/v1", baseUrl);
 		this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws");
 		this.authUrl = new URL("auth/v1", baseUrl);
@@ -661,6 +677,23 @@ var SupabaseClient = class {
 	*/
 	schema(schema) {
 		return this.rest.schema(schema);
+	}
+	/**
+	* Fetch the OpenAPI description PostgREST publishes for this client's schema.
+	*
+	* The document lists only the tables, views and functions the caller's role
+	* holds privileges on. The request carries the same `apikey` and
+	* `Authorization` headers as every other query, so the description is scoped
+	* to the signed-in user. Call `.schema()` first to describe a schema other
+	* than the client default.
+	*
+	* @example
+	* ```ts
+	* const { data, error } = await supabase.getOpenApiSpec()
+	* ```
+	*/
+	getOpenApiSpec() {
+		return this.rest.getOpenApiSpec();
 	}
 	/**
 	* Perform a function call.

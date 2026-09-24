@@ -94,7 +94,7 @@ var WebSocketFactory = class {
 };
 //#endregion
 //#region node_modules/@supabase/realtime-js/dist/module/lib/constants.js
-var DEFAULT_VERSION = `realtime-js/2.114.0`;
+var DEFAULT_VERSION = `realtime-js/2.117.1`;
 var VSN_1_0_0 = "1.0.0";
 var VSN_2_0_0 = "2.0.0";
 var DEFAULT_VSN = VSN_2_0_0;
@@ -1985,6 +1985,10 @@ var RealtimeClient = class {
 	* When an `accessToken` callback IS configured, the callback is the source of truth:
 	* the client remains in callback mode and continues to refresh from it on heartbeat,
 	* even after a bootstrap/override `setAuth(token)` call.
+	*
+	* The callback is called on connect and on every heartbeat (`heartbeatIntervalMs`,
+	* default 25000ms). Its token must stay valid past the next call, or the server closes
+	* the channel at expiry with no automatic resubscribe.
 	*
 	* @param token A JWT string to override the token set on the client.
 	*

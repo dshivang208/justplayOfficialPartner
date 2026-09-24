@@ -4287,11 +4287,13 @@ var require_react_dom_production = /* @__PURE__ */ __commonJSMin(((exports) => {
 		findDOMNode: null
 	};
 	var REACT_PORTAL_TYPE = Symbol.for("react.portal");
+	var REACT_RECOVERABLE_TYPE = Symbol.for("react.recoverable");
+	var REACT_OPTIMISTIC_KEY = Symbol.for("react.optimistic_key");
 	function createPortal$1(children, containerInfo, implementation) {
 		var key = 3 < arguments.length && void 0 !== arguments[3] ? arguments[3] : null;
 		return {
 			$$typeof: REACT_PORTAL_TYPE,
-			key: null == key ? null : "" + key,
+			key: null == key ? null : key === REACT_OPTIMISTIC_KEY ? REACT_OPTIMISTIC_KEY : "" + key,
 			children,
 			containerInfo,
 			implementation
@@ -4303,6 +4305,12 @@ var require_react_dom_production = /* @__PURE__ */ __commonJSMin(((exports) => {
 		if ("string" === typeof input) return "use-credentials" === input ? input : "";
 	}
 	exports.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = Internals;
+	exports.browser = function(reason) {
+		return {
+			$$typeof: REACT_RECOVERABLE_TYPE,
+			_reason: reason
+		};
+	};
 	exports.createPortal = function(children, container) {
 		var key = 2 < arguments.length && void 0 !== arguments[2] ? arguments[2] : null;
 		if (!container || 1 !== container.nodeType && 9 !== container.nodeType && 11 !== container.nodeType) throw Error(formatProdErrorMessage(299));
@@ -4344,7 +4352,8 @@ var require_react_dom_production = /* @__PURE__ */ __commonJSMin(((exports) => {
 				Internals.d.M(href, {
 					crossOrigin,
 					integrity: "string" === typeof options.integrity ? options.integrity : void 0,
-					nonce: "string" === typeof options.nonce ? options.nonce : void 0
+					nonce: "string" === typeof options.nonce ? options.nonce : void 0,
+					fetchPriority: "string" === typeof options.fetchPriority ? options.fetchPriority : void 0
 				});
 			}
 		} else options ?? Internals.d.M(href);
@@ -4371,7 +4380,9 @@ var require_react_dom_production = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Internals.d.m(href, {
 				as: "string" === typeof options.as && "script" !== options.as ? options.as : void 0,
 				crossOrigin,
-				integrity: "string" === typeof options.integrity ? options.integrity : void 0
+				integrity: "string" === typeof options.integrity ? options.integrity : void 0,
+				nonce: "string" === typeof options.nonce ? options.nonce : void 0,
+				fetchPriority: "string" === typeof options.fetchPriority ? options.fetchPriority : void 0
 			});
 		} else Internals.d.m(href);
 	};
@@ -4387,7 +4398,7 @@ var require_react_dom_production = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.useFormStatus = function() {
 		return ReactSharedInternals.H.useHostTransitionStatus();
 	};
-	exports.version = "19.2.8";
+	exports.version = "19.3.0";
 }));
 //#endregion
 //#region node_modules/react-dom/index.js
@@ -5495,12 +5506,14 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	var REACT_LEGACY_HIDDEN_TYPE = Symbol.for("react.legacy_hidden");
 	var REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
 	var REACT_VIEW_TRANSITION_TYPE = Symbol.for("react.view_transition");
+	var REACT_RECOVERABLE_TYPE = Symbol.for("react.recoverable");
 	var MAYBE_ITERATOR_SYMBOL = Symbol.iterator;
 	function getIteratorFn(maybeIterable) {
 		if (null === maybeIterable || "object" !== typeof maybeIterable) return null;
 		maybeIterable = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable["@@iterator"];
 		return "function" === typeof maybeIterable ? maybeIterable : null;
 	}
+	var REACT_OPTIMISTIC_KEY = Symbol.for("react.optimistic_key");
 	var isArrayImpl = Array.isArray;
 	function murmurhash3_32_gc(key, seed) {
 		var remainder = key.length & 3;
@@ -5583,6 +5596,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		["markerEnd", "marker-end"],
 		["markerMid", "marker-mid"],
 		["markerStart", "marker-start"],
+		["maskType", "mask-type"],
 		["overlinePosition", "overline-position"],
 		["overlineThickness", "overline-thickness"],
 		["paintOrder", "paint-order"],
@@ -5742,7 +5756,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				break;
 			case "html": if (0 === parentContext.insertionMode) return createFormatContext(1, null, subtreeScope, null);
 		}
-		return 6 <= parentContext.insertionMode || 2 > parentContext.insertionMode ? createFormatContext(2, null, subtreeScope, null) : parentContext.tagScope !== subtreeScope ? createFormatContext(parentContext.insertionMode, parentContext.selectedValue, subtreeScope, null) : parentContext;
+		return 6 <= parentContext.insertionMode || 2 > parentContext.insertionMode ? createFormatContext(2, null, subtreeScope, null) : null !== parentContext.viewTransition || parentContext.tagScope !== subtreeScope ? createFormatContext(parentContext.insertionMode, parentContext.selectedValue, subtreeScope, null) : parentContext;
 	}
 	function getSuspenseViewTransition(parentViewTransition) {
 		return null === parentViewTransition ? null : {
@@ -5750,6 +5764,8 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			enter: "none",
 			exit: "none",
 			share: parentViewTransition.update,
+			parentEnter: "none",
+			parentExit: "none",
 			name: parentViewTransition.autoName,
 			autoName: parentViewTransition.autoName,
 			nameIdx: 0
@@ -5764,6 +5780,15 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		var subtreeScope = parentContext.tagScope | 16;
 		null !== resumableState && "none" !== resumableState.share && (subtreeScope |= 64);
 		return createFormatContext(parentContext.insertionMode, parentContext.selectedValue, subtreeScope, resumableState);
+	}
+	function makeId(resumableState, treeId, localId) {
+		resumableState = "_" + resumableState.idPrefix + "R_" + treeId;
+		0 < localId && (resumableState += "H" + localId.toString(32));
+		return resumableState + "_";
+	}
+	function pushViewTransitionAttributes(target, formatContext) {
+		formatContext = formatContext.viewTransition;
+		null !== formatContext && ("auto" !== formatContext.name && (pushStringAttribute(target, "vt-name", 0 === formatContext.nameIdx ? formatContext.name : formatContext.name + "_" + formatContext.nameIdx), formatContext.nameIdx++), pushStringAttribute(target, "vt-update", formatContext.update), "none" !== formatContext.enter && pushStringAttribute(target, "vt-enter", formatContext.enter), "none" !== formatContext.exit && pushStringAttribute(target, "vt-exit", formatContext.exit), "none" !== formatContext.share && pushStringAttribute(target, "vt-share", formatContext.share));
 	}
 	var styleNameCache = /* @__PURE__ */ new Map();
 	function pushStyleAttribute(target, style) {
@@ -5882,6 +5907,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			case "async":
 			case "autoPlay":
 			case "controls":
+			case "credentialless":
 			case "default":
 			case "defer":
 			case "disabled":
@@ -5976,7 +6002,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		if (0 === (resumableState.instructions & 16)) {
 			resumableState.instructions |= 16;
 			var preamble = renderState.preamble, bootstrapChunks = renderState.bootstrapChunks;
-			(preamble.htmlChunks || preamble.headChunks) && 0 === bootstrapChunks.length ? (bootstrapChunks.push(renderState.startInlineScript), pushCompletedShellIdAttribute(bootstrapChunks, resumableState), bootstrapChunks.push(">", "addEventListener(\"submit\",function(a){if(!a.defaultPrevented){var c=a.target,d=a.submitter,e=c.action,b=d;if(d){var f=d.getAttribute(\"formAction\");null!=f&&(e=f,b=null)}\"javascript:throw new Error('React form unexpectedly submitted.')\"===e&&(a.preventDefault(),b?(a=document.createElement(\"input\"),a.name=b.name,a.value=b.value,b.parentNode.insertBefore(a,b),b=new FormData(c),a.parentNode.removeChild(a)):b=new FormData(c),a=c.ownerDocument||c,(a.$$reactFormReplay=a.$$reactFormReplay||[]).push(c,d,b))}});", "<\/script>")) : bootstrapChunks.unshift(renderState.startInlineScript, ">", "addEventListener(\"submit\",function(a){if(!a.defaultPrevented){var c=a.target,d=a.submitter,e=c.action,b=d;if(d){var f=d.getAttribute(\"formAction\");null!=f&&(e=f,b=null)}\"javascript:throw new Error('React form unexpectedly submitted.')\"===e&&(a.preventDefault(),b?(a=document.createElement(\"input\"),a.name=b.name,a.value=b.value,b.parentNode.insertBefore(a,b),b=new FormData(c),a.parentNode.removeChild(a)):b=new FormData(c),a=c.ownerDocument||c,(a.$$reactFormReplay=a.$$reactFormReplay||[]).push(c,d,b))}});", "<\/script>");
+			(preamble.htmlChunks || preamble.headChunks) && 0 === bootstrapChunks.length ? (bootstrapChunks.push(renderState.startInlineScript), pushCompletedShellIdAttribute(bootstrapChunks, resumableState), bootstrapChunks.push(">", "addEventListener(\"submit\",function(a){if(!a.defaultPrevented){var b=a.target,d=a.submitter,c=b.action,e=d;if(d){var f=d.getAttribute(\"formAction\");null!=f&&(c=f,e=null)}\"javascript:throw new Error('React form unexpectedly submitted.')\"===c&&(a.preventDefault(),a=new FormData(b,e),c=b.ownerDocument||b,(c.$$reactFormReplay=c.$$reactFormReplay||[]).push(b,d,a))}});", "<\/script>")) : bootstrapChunks.unshift(renderState.startInlineScript, ">", "addEventListener(\"submit\",function(a){if(!a.defaultPrevented){var b=a.target,d=a.submitter,c=b.action,e=d;if(d){var f=d.getAttribute(\"formAction\");null!=f&&(c=f,e=null)}\"javascript:throw new Error('React form unexpectedly submitted.')\"===c&&(a.preventDefault(),a=new FormData(b,e),c=b.ownerDocument||b,(c.$$reactFormReplay=c.$$reactFormReplay||[]).push(b,d,a))}});", "<\/script>");
 		}
 	}
 	function pushLinkImpl(target, props) {
@@ -5996,7 +6022,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	function styleReplacer(match, prefix, s, suffix) {
 		return "" + prefix + ("s" === s ? "\\73 " : "\\53 ") + suffix;
 	}
-	function pushSelfClosing(target, props, tag) {
+	function pushSelfClosing(target, props, tag, formatContext) {
 		target.push(startChunkForTag(tag));
 		for (var propKey in props) if (hasOwnProperty.call(props, propKey)) {
 			var propValue = props[propKey];
@@ -6006,6 +6032,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				default: pushAttribute(target, propKey, propValue);
 			}
 		}
+		pushViewTransitionAttributes(target, formatContext);
 		target.push("/>");
 		return null;
 	}
@@ -6052,7 +6079,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		target.push(endChunkForTag("script"));
 		return null;
 	}
-	function pushStartSingletonElement(target, props, tag) {
+	function pushStartSingletonElement(target, props, tag, formatContext) {
 		target.push(startChunkForTag(tag));
 		var innerHTML = tag = null, propKey;
 		for (propKey in props) if (hasOwnProperty.call(props, propKey)) {
@@ -6067,11 +6094,12 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				default: pushAttribute(target, propKey, propValue);
 			}
 		}
+		pushViewTransitionAttributes(target, formatContext);
 		target.push(">");
 		pushInnerHTML(target, innerHTML, tag);
 		return tag;
 	}
-	function pushStartGenericElement(target, props, tag) {
+	function pushStartGenericElement(target, props, tag, formatContext) {
 		target.push(startChunkForTag(tag));
 		var innerHTML = tag = null, propKey;
 		for (propKey in props) if (hasOwnProperty.call(props, propKey)) {
@@ -6086,6 +6114,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				default: pushAttribute(target, propKey, propValue);
 			}
 		}
+		pushViewTransitionAttributes(target, formatContext);
 		target.push(">");
 		pushInnerHTML(target, innerHTML, tag);
 		return "string" === typeof tag ? (target.push(escapeTextForBrowser(tag)), null) : tag;
@@ -6125,6 +6154,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						default: pushAttribute(target$jscomp$0, propKey, propValue);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				pushInnerHTML(target$jscomp$0, innerHTML, children);
 				if ("string" === typeof children) {
@@ -6152,6 +6182,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$0, propValue$jscomp$0);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$0, children$jscomp$0);
 				return children$jscomp$0;
@@ -6207,6 +6238,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					}
 				}
 				null === value$jscomp$0 && null !== defaultValue && (value$jscomp$0 = defaultValue);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				if (null != children$jscomp$2) {
 					if (null != value$jscomp$0) throw Error("If you supply `defaultValue` on a <textarea>, do not pass children.");
@@ -6260,6 +6292,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				var formData = pushFormActionAttribute(target$jscomp$0, resumableState, renderState, formAction, formEncType, formMethod, formTarget, name);
 				null !== checked ? pushBooleanAttribute(target$jscomp$0, "checked", checked) : null !== defaultChecked && pushBooleanAttribute(target$jscomp$0, "checked", defaultChecked);
 				null !== value$jscomp$1 ? pushAttribute(target$jscomp$0, "value", value$jscomp$1) : null !== defaultValue$jscomp$0 && pushAttribute(target$jscomp$0, "value", defaultValue$jscomp$0);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push("/>");
 				formData?.forEach(pushAdditionalFormField, target$jscomp$0);
 				return null;
@@ -6294,6 +6327,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					}
 				}
 				var formData$jscomp$0 = pushFormActionAttribute(target$jscomp$0, resumableState, renderState, formAction$jscomp$0, formEncType$jscomp$0, formMethod$jscomp$0, formTarget$jscomp$0, name$jscomp$0);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				formData$jscomp$0?.forEach(pushAdditionalFormField, target$jscomp$0);
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$2, children$jscomp$3);
@@ -6338,6 +6372,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				null != formEncType$jscomp$1 && pushAttribute(target$jscomp$0, "encType", formEncType$jscomp$1);
 				null != formMethod$jscomp$1 && pushAttribute(target$jscomp$0, "method", formMethod$jscomp$1);
 				null != formTarget$jscomp$1 && pushAttribute(target$jscomp$0, "target", formTarget$jscomp$1);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				null !== formActionName && (target$jscomp$0.push("<input type=\"hidden\""), pushStringAttribute(target$jscomp$0, "name", formActionName), target$jscomp$0.push("/>"), formData$jscomp$1?.forEach(pushAdditionalFormField, target$jscomp$0));
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$3, children$jscomp$4);
@@ -6356,6 +6391,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$6, propValue$jscomp$6);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				return null;
 			case "object":
@@ -6378,6 +6414,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$7, propValue$jscomp$7);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$4, children$jscomp$5);
 				if ("string" === typeof children$jscomp$5) {
@@ -6513,8 +6550,8 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				return JSCompiler_inline_result$jscomp$6;
 			case "meta":
 				var noscriptTagInScope$jscomp$3 = formatContext.tagScope & 1, isFallback$jscomp$1 = formatContext.tagScope & 4;
-				if (4 === formatContext.insertionMode || noscriptTagInScope$jscomp$3 || null != props.itemProp) var JSCompiler_inline_result$jscomp$7 = pushSelfClosing(target$jscomp$0, props, "meta");
-				else textEmbedded && target$jscomp$0.push("<!-- -->"), JSCompiler_inline_result$jscomp$7 = isFallback$jscomp$1 ? null : "string" === typeof props.charSet ? pushSelfClosing(renderState.charsetChunks, props, "meta") : "viewport" === props.name ? pushSelfClosing(renderState.viewportChunks, props, "meta") : pushSelfClosing(renderState.hoistableChunks, props, "meta");
+				if (4 === formatContext.insertionMode || noscriptTagInScope$jscomp$3 || null != props.itemProp) var JSCompiler_inline_result$jscomp$7 = pushSelfClosing(target$jscomp$0, props, "meta", formatContext);
+				else textEmbedded && target$jscomp$0.push("<!-- -->"), JSCompiler_inline_result$jscomp$7 = isFallback$jscomp$1 ? null : "string" === typeof props.charSet ? pushSelfClosing(renderState.charsetChunks, props, "meta", formatContext) : "viewport" === props.name ? pushSelfClosing(renderState.viewportChunks, props, "meta", formatContext) : pushSelfClosing(renderState.hoistableChunks, props, "meta", formatContext);
 				return JSCompiler_inline_result$jscomp$7;
 			case "listing":
 			case "pre":
@@ -6532,6 +6569,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$10, propValue$jscomp$10);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				if (null != innerHTML$jscomp$7) {
 					if (null != children$jscomp$8) throw Error("Can only set one of `children` or `props.dangerouslySetInnerHTML`.");
@@ -6561,7 +6599,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 							nonce: props.nonce,
 							type: props.type,
 							fetchPriority: props.fetchPriority,
-							referrerPolicy: props.refererPolicy
+							referrerPolicy: props.referrerPolicy
 						}), 0 <= (headers.remainingCapacity -= header.length + 2)) ? (renderState.resets.image[key$jscomp$0] = PRELOAD_NO_CREDS, headers.highImagePreloads && (headers.highImagePreloads += ", "), headers.highImagePreloads += header) : (resource$jscomp$1 = [], pushLinkImpl(resource$jscomp$1, {
 							rel: "preload",
 							as: "image",
@@ -6576,7 +6614,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						}), "high" === props.fetchPriority || 10 > renderState.highImagePreloads.size ? renderState.highImagePreloads.add(resource$jscomp$1) : (renderState.bulkPreloads.add(resource$jscomp$1), promotablePreloads.set(key$jscomp$0, resource$jscomp$1)));
 					}
 				}
-				return pushSelfClosing(target$jscomp$0, props, "img");
+				return pushSelfClosing(target$jscomp$0, props, "img", formatContext);
 			case "base":
 			case "area":
 			case "br":
@@ -6587,7 +6625,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			case "param":
 			case "source":
 			case "track":
-			case "wbr": return pushSelfClosing(target$jscomp$0, props, type);
+			case "wbr": return pushSelfClosing(target$jscomp$0, props, type, formatContext);
 			case "annotation-xml":
 			case "color-profile":
 			case "font-face":
@@ -6602,8 +6640,8 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					if (preamble.headChunks) throw Error("The `<head>` tag may only be rendered once.");
 					null !== preambleState && target$jscomp$0.push("<!--head-->");
 					preamble.headChunks = [];
-					var JSCompiler_inline_result$jscomp$9 = pushStartSingletonElement(preamble.headChunks, props, "head");
-				} else JSCompiler_inline_result$jscomp$9 = pushStartGenericElement(target$jscomp$0, props, "head");
+					var JSCompiler_inline_result$jscomp$9 = pushStartSingletonElement(preamble.headChunks, props, "head", formatContext);
+				} else JSCompiler_inline_result$jscomp$9 = pushStartGenericElement(target$jscomp$0, props, "head", formatContext);
 				return JSCompiler_inline_result$jscomp$9;
 			case "body":
 				if (2 > formatContext.insertionMode) {
@@ -6611,8 +6649,8 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					if (preamble$jscomp$0.bodyChunks) throw Error("The `<body>` tag may only be rendered once.");
 					null !== preambleState && target$jscomp$0.push("<!--body-->");
 					preamble$jscomp$0.bodyChunks = [];
-					var JSCompiler_inline_result$jscomp$10 = pushStartSingletonElement(preamble$jscomp$0.bodyChunks, props, "body");
-				} else JSCompiler_inline_result$jscomp$10 = pushStartGenericElement(target$jscomp$0, props, "body");
+					var JSCompiler_inline_result$jscomp$10 = pushStartSingletonElement(preamble$jscomp$0.bodyChunks, props, "body", formatContext);
+				} else JSCompiler_inline_result$jscomp$10 = pushStartGenericElement(target$jscomp$0, props, "body", formatContext);
 				return JSCompiler_inline_result$jscomp$10;
 			case "html":
 				if (0 === formatContext.insertionMode) {
@@ -6620,8 +6658,8 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					if (preamble$jscomp$1.htmlChunks) throw Error("The `<html>` tag may only be rendered once.");
 					null !== preambleState && target$jscomp$0.push("<!--html-->");
 					preamble$jscomp$1.htmlChunks = [""];
-					var JSCompiler_inline_result$jscomp$11 = pushStartSingletonElement(preamble$jscomp$1.htmlChunks, props, "html");
-				} else JSCompiler_inline_result$jscomp$11 = pushStartGenericElement(target$jscomp$0, props, "html");
+					var JSCompiler_inline_result$jscomp$11 = pushStartSingletonElement(preamble$jscomp$1.htmlChunks, props, "html", formatContext);
+				} else JSCompiler_inline_result$jscomp$11 = pushStartGenericElement(target$jscomp$0, props, "html", formatContext);
 				return JSCompiler_inline_result$jscomp$11;
 			default: if (-1 !== type.indexOf("-")) {
 				target$jscomp$0.push(startChunkForTag(type));
@@ -6652,12 +6690,13 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						}
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(">");
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$8, children$jscomp$9);
 				return children$jscomp$9;
 			}
 		}
-		return pushStartGenericElement(target$jscomp$0, props, type);
+		return pushStartGenericElement(target$jscomp$0, props, type, formatContext);
 	}
 	var endTagCache = /* @__PURE__ */ new Map();
 	function endChunkForTag(tag) {
@@ -7031,7 +7070,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						break;
 					default:
 						if (resumableState.moduleUnknownResources.hasOwnProperty(as)) {
-							var resources = resumableState.unknownResources[as];
+							var resources = resumableState.moduleUnknownResources[as];
 							if (resources.hasOwnProperty(href)) return;
 						} else resources = {}, resumableState.moduleUnknownResources[as] = resources;
 						as = [];
@@ -7144,9 +7183,9 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		var idPrefix = resumableState.idPrefix, bootstrapChunks = [], bootstrapScriptContent = resumableState.bootstrapScriptContent, bootstrapScripts = resumableState.bootstrapScripts, bootstrapModules = resumableState.bootstrapModules;
 		void 0 !== bootstrapScriptContent && (bootstrapChunks.push("<script"), pushCompletedShellIdAttribute(bootstrapChunks, resumableState), bootstrapChunks.push(">", ("" + bootstrapScriptContent).replace(scriptRegex, scriptReplacer), "<\/script>"));
 		bootstrapScriptContent = idPrefix + "P:";
-		var JSCompiler_object_inline_segmentPrefix_1673 = idPrefix + "S:";
+		var JSCompiler_object_inline_segmentPrefix_1724 = idPrefix + "S:";
 		idPrefix += "B:";
-		var JSCompiler_object_inline_preconnects_1687 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_fontPreloads_1688 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_highImagePreloads_1689 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_styles_1690 = /* @__PURE__ */ new Map(), JSCompiler_object_inline_bootstrapScripts_1691 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_scripts_1692 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_bulkPreloads_1693 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_preloads_1694 = {
+		var JSCompiler_object_inline_preconnects_1738 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_fontPreloads_1739 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_highImagePreloads_1740 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_styles_1741 = /* @__PURE__ */ new Map(), JSCompiler_object_inline_bootstrapScripts_1742 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_scripts_1743 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_bulkPreloads_1744 = /* @__PURE__ */ new Set(), JSCompiler_object_inline_preloads_1745 = {
 			images: /* @__PURE__ */ new Map(),
 			stylesheets: /* @__PURE__ */ new Map(),
 			scripts: /* @__PURE__ */ new Map(),
@@ -7166,7 +7205,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			scriptConfig.moduleScriptResources[href] = null;
 			scriptConfig = [];
 			pushLinkImpl(scriptConfig, props);
-			JSCompiler_object_inline_bootstrapScripts_1691.add(scriptConfig);
+			JSCompiler_object_inline_bootstrapScripts_1742.add(scriptConfig);
 			bootstrapChunks.push("<script src=\"", escapeTextForBrowser(src), "\"");
 			"string" === typeof integrity && bootstrapChunks.push(" integrity=\"", escapeTextForBrowser(integrity), "\"");
 			"string" === typeof crossOrigin && bootstrapChunks.push(" crossorigin=\"", escapeTextForBrowser(crossOrigin), "\"");
@@ -7177,10 +7216,10 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			rel: "modulepreload",
 			fetchPriority: "low",
 			nonce: void 0
-		}, "string" === typeof props ? integrity.href = i = props : (integrity.href = i = props.src, integrity.integrity = crossOrigin = "string" === typeof props.integrity ? props.integrity : void 0, integrity.crossOrigin = src = "string" === typeof props || null == props.crossOrigin ? void 0 : "use-credentials" === props.crossOrigin ? "use-credentials" : ""), props = resumableState, scriptConfig = i, props.scriptResources[scriptConfig] = null, props.moduleScriptResources[scriptConfig] = null, props = [], pushLinkImpl(props, integrity), JSCompiler_object_inline_bootstrapScripts_1691.add(props), bootstrapChunks.push("<script type=\"module\" src=\"", escapeTextForBrowser(i), "\""), "string" === typeof crossOrigin && bootstrapChunks.push(" integrity=\"", escapeTextForBrowser(crossOrigin), "\""), "string" === typeof src && bootstrapChunks.push(" crossorigin=\"", escapeTextForBrowser(src), "\""), pushCompletedShellIdAttribute(bootstrapChunks, resumableState), bootstrapChunks.push(" async=\"\"><\/script>");
+		}, "string" === typeof props ? integrity.href = i = props : (integrity.href = i = props.src, integrity.integrity = crossOrigin = "string" === typeof props.integrity ? props.integrity : void 0, integrity.crossOrigin = src = "string" === typeof props || null == props.crossOrigin ? void 0 : "use-credentials" === props.crossOrigin ? "use-credentials" : ""), props = resumableState, scriptConfig = i, props.scriptResources[scriptConfig] = null, props.moduleScriptResources[scriptConfig] = null, props = [], pushLinkImpl(props, integrity), JSCompiler_object_inline_bootstrapScripts_1742.add(props), bootstrapChunks.push("<script type=\"module\" src=\"", escapeTextForBrowser(i), "\""), "string" === typeof crossOrigin && bootstrapChunks.push(" integrity=\"", escapeTextForBrowser(crossOrigin), "\""), "string" === typeof src && bootstrapChunks.push(" crossorigin=\"", escapeTextForBrowser(src), "\""), pushCompletedShellIdAttribute(bootstrapChunks, resumableState), bootstrapChunks.push(" async=\"\"><\/script>");
 		return {
 			placeholderPrefix: bootstrapScriptContent,
-			segmentPrefix: JSCompiler_object_inline_segmentPrefix_1673,
+			segmentPrefix: JSCompiler_object_inline_segmentPrefix_1724,
 			boundaryPrefix: idPrefix,
 			startInlineScript: "<script",
 			startInlineStyle: "<style",
@@ -7208,14 +7247,14 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			charsetChunks: [],
 			viewportChunks: [],
 			hoistableChunks: [],
-			preconnects: JSCompiler_object_inline_preconnects_1687,
-			fontPreloads: JSCompiler_object_inline_fontPreloads_1688,
-			highImagePreloads: JSCompiler_object_inline_highImagePreloads_1689,
-			styles: JSCompiler_object_inline_styles_1690,
-			bootstrapScripts: JSCompiler_object_inline_bootstrapScripts_1691,
-			scripts: JSCompiler_object_inline_scripts_1692,
-			bulkPreloads: JSCompiler_object_inline_bulkPreloads_1693,
-			preloads: JSCompiler_object_inline_preloads_1694,
+			preconnects: JSCompiler_object_inline_preconnects_1738,
+			fontPreloads: JSCompiler_object_inline_fontPreloads_1739,
+			highImagePreloads: JSCompiler_object_inline_highImagePreloads_1740,
+			styles: JSCompiler_object_inline_styles_1741,
+			bootstrapScripts: JSCompiler_object_inline_bootstrapScripts_1742,
+			scripts: JSCompiler_object_inline_scripts_1743,
+			bulkPreloads: JSCompiler_object_inline_bulkPreloads_1744,
+			preloads: JSCompiler_object_inline_preloads_1745,
 			nonce: {
 				script: void 0,
 				style: void 0
@@ -7245,6 +7284,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			case REACT_SUSPENSE_TYPE: return "Suspense";
 			case REACT_SUSPENSE_LIST_TYPE: return "SuspenseList";
 			case REACT_ACTIVITY_TYPE: return "Activity";
+			case REACT_VIEW_TRANSITION_TYPE: return "ViewTransition";
 		}
 		if ("object" === typeof type) switch (type.$$typeof) {
 			case REACT_PORTAL_TYPE: return "Portal";
@@ -7323,6 +7363,11 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		id: 1,
 		overflow: ""
 	};
+	function getTreeId(context) {
+		var overflow = context.overflow;
+		context = context.id;
+		return (context & ~(1 << 32 - clz32(context) - 1)).toString(32) + overflow;
+	}
 	function pushTreeContext(baseContext, totalChildren, index) {
 		var baseIdWithLeadingBit = baseContext.id;
 		baseContext = baseContext.overflow;
@@ -7359,7 +7404,10 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		void 0 === index ? thenableState.push(thenable) : index !== thenable && (thenable.then(noop, noop), thenable = index);
 		switch (thenable.status) {
 			case "fulfilled": return thenable.value;
-			case "rejected": throw thenable.reason;
+			case "rejected":
+				thenableState = thenable.reason;
+				if (void 0 === thenableState && !("reason" in thenable)) throw Error("A rejected Promise was passed to React without a `reason` property. React threw a generic error from where the Promise was used to assist in identifying the problematic Promise. Make sure that instrumented Promises correctly set the `reason` property when setting `status` to `'rejected'`.");
+				throw thenableState;
 			default:
 				"string" === typeof thenable.status ? thenable.then(noop, noop) : (thenableState = thenable, thenableState.status = "pending", thenableState.then(function(fulfilledValue) {
 					if ("pending" === thenable.status) {
@@ -7406,6 +7454,30 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	var actionStateMatchingIndex = -1;
 	var thenableIndexCounter = 0;
 	var thenableState = null;
+	function createRecoverableError(recoverable) {
+		recoverable = recoverable._reason;
+		if ("function" === typeof recoverable) try {
+			var initializedReason = recoverable();
+		} catch ($jscomp$unused$catch) {
+			initializedReason = "The reason for browser-only rendering could not be determined because its initializer threw.";
+		}
+		else initializedReason = recoverable;
+		initializedReason = Error("Browser-only rendering was requested by `browser()`.", void 0 === recoverable ? void 0 : { cause: initializedReason });
+		Object.defineProperty(initializedReason, REACT_RECOVERABLE_TYPE, { value: !0 });
+		return initializedReason;
+	}
+	function isRecoverableError(error) {
+		return "object" !== typeof error || null === error ? !1 : !0 === error[REACT_RECOVERABLE_TYPE];
+	}
+	function cloneRecoverableErrorAsFatal(recoverableError) {
+		var fatalRecoverableError = Error("The server render could not complete because client rendering was requested outside a Suspense boundary. See this error's cause for additional details.", hasOwnProperty.call(recoverableError, "cause") ? { cause: recoverableError.cause } : void 0);
+		recoverableError = recoverableError.stack;
+		if (void 0 !== recoverableError) {
+			var frameStart = recoverableError.indexOf("\n");
+			fatalRecoverableError.stack = fatalRecoverableError.name + ": " + fatalRecoverableError.message + (-1 === frameStart ? "" : recoverableError.slice(frameStart));
+		} else fatalRecoverableError.stack = void 0;
+		return fatalRecoverableError;
+	}
 	var renderPhaseUpdates = null;
 	var numberOfReRenders = 0;
 	function resolveCurrentlyRenderingComponent() {
@@ -7569,6 +7641,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		use: function(usable) {
 			if (null !== usable && "object" === typeof usable) {
 				if ("function" === typeof usable.then) return unwrapThenable(usable);
+				if (usable.$$typeof === REACT_RECOVERABLE_TYPE) throw createRecoverableError(usable);
 				if (usable.$$typeof === REACT_CONTEXT_TYPE) return usable._currentValue2;
 			}
 			throw Error("An unsupported type was passed to use(): " + String(usable));
@@ -7607,16 +7680,9 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			return [!1, unsupportedStartTransition];
 		},
 		useId: function() {
-			var JSCompiler_inline_result = currentlyRenderingTask.treeContext;
-			var overflow = JSCompiler_inline_result.overflow;
-			JSCompiler_inline_result = JSCompiler_inline_result.id;
-			JSCompiler_inline_result = (JSCompiler_inline_result & ~(1 << 32 - clz32(JSCompiler_inline_result) - 1)).toString(32) + overflow;
-			var resumableState = currentResumableState;
+			var treeId = getTreeId(currentlyRenderingTask.treeContext), resumableState = currentResumableState;
 			if (null === resumableState) throw Error("Invalid hook call. Hooks can only be called inside of the body of a function component.");
-			overflow = localIdCounter++;
-			JSCompiler_inline_result = "_" + resumableState.idPrefix + "R_" + JSCompiler_inline_result;
-			0 < overflow && (JSCompiler_inline_result += "H" + overflow.toString(32));
-			return JSCompiler_inline_result + "_";
+			return makeId(resumableState, treeId, localIdCounter++);
 		},
 		useSyncExternalStore: function(subscribe, getSnapshot, getServerSnapshot) {
 			if (void 0 === getServerSnapshot) throw Error("Missing getServerSnapshot, which is required for server-rendered content. Will revert to client rendering.");
@@ -7693,7 +7759,20 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 							} catch (x$24) {
 								control = x$24;
 							}
-							fn.call(Fake.prototype);
+							Fake = !1;
+							try {
+								var prevProps = Object.getOwnPropertyDescriptor(fn.prototype, "props");
+								Object.defineProperty(fn.prototype, "props", {
+									configurable: !0,
+									set: function() {
+										throw Error();
+									}
+								});
+								Fake = !0;
+								new fn();
+							} finally {
+								Fake && (void 0 !== prevProps ? Object.defineProperty(fn.prototype, "props", prevProps) : delete fn.prototype.props);
+							}
 						}
 					} else {
 						try {
@@ -7767,11 +7846,12 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		switch (type) {
 			case REACT_SUSPENSE_LIST_TYPE: return describeBuiltInComponentFrame("SuspenseList");
 			case REACT_SUSPENSE_TYPE: return describeBuiltInComponentFrame("Suspense");
+			case REACT_VIEW_TRANSITION_TYPE: return describeBuiltInComponentFrame("ViewTransition");
 		}
 		return "";
 	}
 	function isEligibleForOutlining(request, boundary) {
-		return (500 < boundary.byteSize || !1) && null === boundary.contentPreamble;
+		return (500 < boundary.byteSize || boundary.defer) && null === boundary.preamble;
 	}
 	function defaultErrorHandler(error) {
 		if ("object" === typeof error && null !== error && "string" === typeof error.environmentName) {
@@ -7784,7 +7864,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		} else console.error(error);
 		return null;
 	}
-	function RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, formState) {
+	function RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, formState) {
 		var abortSet = /* @__PURE__ */ new Set();
 		this.destination = null;
 		this.flushScheduled = !1;
@@ -7794,25 +7874,28 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		this.progressiveChunkSize = void 0 === progressiveChunkSize ? 12800 : progressiveChunkSize;
 		this.status = 10;
 		this.fatalError = null;
+		this.aborted = !1;
 		this.pendingRootTasks = this.allPendingTasks = this.nextSegmentId = 0;
 		this.completedPreambleSegments = this.completedRootSegment = null;
 		this.byteSize = 0;
 		this.abortableTasks = abortSet;
 		this.pingedTasks = [];
+		this.currentTask = null;
 		this.clientRenderedBoundaries = [];
 		this.completedBoundaries = [];
 		this.partialBoundaries = [];
-		this.trackedPostpones = null;
+		this.postponedState = this.trackedPostpones = null;
 		this.onError = void 0 === onError ? defaultErrorHandler : onError;
-		this.onPostpone = void 0 === onPostpone ? noop : onPostpone;
+		this.onBrowserBailout = void 0 === onBrowserBailout ? noop : onBrowserBailout;
 		this.onAllReady = void 0 === onAllReady ? noop : onAllReady;
 		this.onShellReady = void 0 === onShellReady ? noop : onShellReady;
 		this.onShellError = void 0 === onShellError ? noop : onShellError;
 		this.onFatalError = void 0 === onFatalError ? noop : onFatalError;
+		this.renderLifetimeController = null;
 		this.formState = void 0 === formState ? null : formState;
 	}
-	function createRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, formState) {
-		resumableState = new RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, formState);
+	function createRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, formState) {
+		resumableState = new RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, formState);
 		renderState = createPendingSegment(resumableState, 0, null, rootFormatContext, !1, !1);
 		renderState.parentFlushed = !0;
 		children = createRenderTask(resumableState, null, children, -1, null, renderState, null, null, resumableState.abortableTasks, null, rootFormatContext, null, emptyTreeContext, null, null);
@@ -7825,7 +7908,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		request.pingedTasks.push(task);
 		1 === request.pingedTasks.length && (request.flushScheduled = null !== request.destination, performWork(request));
 	}
-	function createSuspenseBoundary(request, row, fallbackAbortableTasks, contentPreamble, fallbackPreamble) {
+	function createSuspenseBoundary(request, row, fallbackAbortableTasks, preamble, defer) {
 		fallbackAbortableTasks = {
 			status: 0,
 			rootSegmentID: -1,
@@ -7834,16 +7917,15 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			row,
 			completedSegments: [],
 			byteSize: 0,
+			defer,
 			fallbackAbortableTasks,
 			errorDigest: null,
 			contentState: createHoistableState(),
 			fallbackState: createHoistableState(),
-			contentPreamble,
-			fallbackPreamble,
-			trackedContentKeyPath: null,
-			trackedFallbackNode: null
+			preamble,
+			tracked: null
 		};
-		null !== row && (row.pendingTasks++, contentPreamble = row.boundaries, null !== contentPreamble && (request.allPendingTasks++, fallbackAbortableTasks.pendingTasks++, contentPreamble.push(fallbackAbortableTasks)), request = row.inheritedHoistables, null !== request && hoistHoistables(fallbackAbortableTasks.contentState, request));
+		null !== row && (row.pendingTasks++, preamble = row.boundaries, null !== preamble && (request.allPendingTasks++, fallbackAbortableTasks.pendingTasks++, preamble.push(fallbackAbortableTasks)), request = row.inheritedHoistables, null !== request && hoistHoistables(fallbackAbortableTasks.contentState, request));
 		return fallbackAbortableTasks;
 	}
 	function createRenderTask(request, thenableState, node, childIndex, blockedBoundary, blockedSegment, blockedPreamble, hoistableState, abortSet, keyPath, formatContext, context, treeContext, row, componentStack) {
@@ -7854,8 +7936,13 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			replay: null,
 			node,
 			childIndex,
-			ping: function() {
-				return pingTask(request, task);
+			ping: {
+				resolve: function() {
+					return pingTask(request, task);
+				},
+				reject: function(error) {
+					request.aborted ? task.abortSet.delete(task) && finishAbortedTask(task, request, error) : pingTask(request, task);
+				}
 			},
 			blockedBoundary,
 			blockedSegment,
@@ -7882,8 +7969,13 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			replay,
 			node,
 			childIndex,
-			ping: function() {
-				return pingTask(request, task);
+			ping: {
+				resolve: function() {
+					return pingTask(request, task);
+				},
+				reject: function(error) {
+					request.aborted ? task.abortSet.delete(task) && finishAbortedTask(task, request, error) : pingTask(request, task);
+				}
 			},
 			blockedBoundary,
 			blockedSegment: null,
@@ -7953,15 +8045,17 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		return errorInfo;
 	}
 	function logRecoverableError(request, error, errorInfo) {
+		if (isRecoverableError(error)) return request = request.onBrowserBailout, request(error, errorInfo), "";
 		request = request.onError;
 		error = request(error, errorInfo);
-		if (null == error || "string" === typeof error) return error;
+		if (null == error || "string" === typeof error) return "" === error ? void 0 : error;
 	}
 	function fatalError(request, error) {
 		var onShellError = request.onShellError, onFatalError = request.onFatalError;
-		onShellError(error);
+		0 !== request.pendingRootTasks && onShellError(error);
 		onFatalError(error);
-		null !== request.destination ? (request.status = 14, request.destination.destroy(error)) : (request.status = 13, request.fatalError = error);
+		endRenderLifetime(request);
+		null !== request.destination ? (request.status = 13, request.destination.destroy(error)) : (request.status = 12, request.aborted || (request.fatalError = error));
 	}
 	function finishSuspenseListRow(request, row) {
 		unblockSuspenseListRow(request, row.next, row.hoistables);
@@ -8027,24 +8121,25 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			else for (resumeSlots = 0; resumeSlots < keyPath; resumeSlots++) n = "backwards" !== revealOrder && "unstable_legacy-backwards" !== revealOrder ? resumeSlots : keyPath - 1 - resumeSlots, i = rows[n], task.row = previousSuspenseListRow = createSuspenseListRow(previousSuspenseListRow), task.treeContext = pushTreeContext(prevTreeContext, keyPath, n), renderNode(request, task, i, n), 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
 		} else if ("backwards" !== revealOrder && "unstable_legacy-backwards" !== revealOrder) for (revealOrder = 0; revealOrder < keyPath; revealOrder++) resumeSlots = rows[revealOrder], task.row = previousSuspenseListRow = createSuspenseListRow(previousSuspenseListRow), task.treeContext = pushTreeContext(prevTreeContext, keyPath, revealOrder), renderNode(request, task, resumeSlots, revealOrder), 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
 		else {
-			revealOrder = task.blockedSegment;
-			resumeSlots = revealOrder.children.length;
-			n = revealOrder.chunks.length;
-			for (i = keyPath - 1; 0 <= i; i--) {
-				node = rows[i];
+			resumeSlots = task.blockedSegment;
+			n = resumeSlots.children.length;
+			i = resumeSlots.chunks.length;
+			for (node = 0; node < keyPath; node++) {
+				resumeSegmentID = "unstable_legacy-backwards" === revealOrder ? keyPath - 1 - node : node;
+				var node$39 = rows[resumeSegmentID];
 				task.row = previousSuspenseListRow = createSuspenseListRow(previousSuspenseListRow);
-				task.treeContext = pushTreeContext(prevTreeContext, keyPath, i);
-				resumeSegmentID = createPendingSegment(request, n, null, task.formatContext, 0 === i ? revealOrder.lastPushedText : !0, !0);
-				revealOrder.children.splice(resumeSlots, 0, resumeSegmentID);
-				task.blockedSegment = resumeSegmentID;
+				task.treeContext = pushTreeContext(prevTreeContext, keyPath, resumeSegmentID);
+				var newSegment = createPendingSegment(request, i, null, task.formatContext, 0 === resumeSegmentID ? resumeSlots.lastPushedText : !0, !0);
+				resumeSlots.children.splice(n, 0, newSegment);
+				task.blockedSegment = newSegment;
 				try {
-					renderNode(request, task, node, i), pushSegmentFinale(resumeSegmentID.chunks, request.renderState, resumeSegmentID.lastPushedText, resumeSegmentID.textEmbedded), resumeSegmentID.status = 1, 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
+					renderNode(request, task, node$39, resumeSegmentID), pushSegmentFinale(newSegment.chunks, request.renderState, newSegment.lastPushedText, newSegment.textEmbedded), newSegment.status = 1, 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
 				} catch (thrownValue) {
-					throw resumeSegmentID.status = 12 === request.status ? 3 : 4, thrownValue;
+					throw newSegment.status = request.aborted ? 3 : 4, thrownValue;
 				}
 			}
-			task.blockedSegment = revealOrder;
-			revealOrder.lastPushedText = !1;
+			task.blockedSegment = resumeSlots;
+			resumeSlots.lastPushedText = !1;
 		}
 		null !== prevRow && null !== previousSuspenseListRow && 0 < previousSuspenseListRow.pendingTasks && (prevRow.pendingTasks++, previousSuspenseListRow.next = prevRow);
 		task.treeContext = prevTreeContext;
@@ -8091,288 +8186,347 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			var defaultProps = type.defaultProps;
 			if (defaultProps) {
 				newProps === props && (newProps = assign({}, newProps, props));
-				for (var propName$43 in defaultProps) void 0 === newProps[propName$43] && (newProps[propName$43] = defaultProps[propName$43]);
+				for (var propName$44 in defaultProps) void 0 === newProps[propName$44] && (newProps[propName$44] = defaultProps[propName$44]);
 			}
-			props = newProps;
-			newProps = emptyContextObject;
-			defaultProps = type.contextType;
-			"object" === typeof defaultProps && null !== defaultProps && (newProps = defaultProps._currentValue2);
-			newProps = new type(props, newProps);
-			var initialState = void 0 !== newProps.state ? newProps.state : null;
-			newProps.updater = classComponentUpdater;
-			newProps.props = props;
-			newProps.state = initialState;
-			defaultProps = {
+			var JSCompiler_inline_result = newProps;
+			var context = emptyContextObject, contextType = type.contextType;
+			"object" === typeof contextType && null !== contextType && (context = contextType._currentValue2);
+			var JSCompiler_inline_result$jscomp$0 = new type(JSCompiler_inline_result, context);
+			var initialState = void 0 !== JSCompiler_inline_result$jscomp$0.state ? JSCompiler_inline_result$jscomp$0.state : null;
+			JSCompiler_inline_result$jscomp$0.updater = classComponentUpdater;
+			JSCompiler_inline_result$jscomp$0.props = JSCompiler_inline_result;
+			JSCompiler_inline_result$jscomp$0.state = initialState;
+			var internalInstance = {
 				queue: [],
 				replace: !1
 			};
-			newProps._reactInternals = defaultProps;
-			ref = type.contextType;
-			newProps.context = "object" === typeof ref && null !== ref ? ref._currentValue2 : emptyContextObject;
-			ref = type.getDerivedStateFromProps;
-			"function" === typeof ref && (ref = ref(props, initialState), initialState = null === ref || void 0 === ref ? initialState : assign({}, initialState, ref), newProps.state = initialState);
-			if ("function" !== typeof type.getDerivedStateFromProps && "function" !== typeof newProps.getSnapshotBeforeUpdate && ("function" === typeof newProps.UNSAFE_componentWillMount || "function" === typeof newProps.componentWillMount)) if (type = newProps.state, "function" === typeof newProps.componentWillMount && newProps.componentWillMount(), "function" === typeof newProps.UNSAFE_componentWillMount && newProps.UNSAFE_componentWillMount(), type !== newProps.state && classComponentUpdater.enqueueReplaceState(newProps, newProps.state, null), null !== defaultProps.queue && 0 < defaultProps.queue.length) if (type = defaultProps.queue, ref = defaultProps.replace, defaultProps.queue = null, defaultProps.replace = !1, ref && 1 === type.length) newProps.state = type[0];
-			else {
-				defaultProps = ref ? type[0] : newProps.state;
-				initialState = !0;
-				for (ref = ref ? 1 : 0; ref < type.length; ref++) propName$43 = type[ref], propName$43 = "function" === typeof propName$43 ? propName$43.call(newProps, defaultProps, props, void 0) : propName$43, null != propName$43 && (initialState ? (initialState = !1, defaultProps = assign({}, defaultProps, propName$43)) : assign(defaultProps, propName$43));
-				newProps.state = defaultProps;
+			JSCompiler_inline_result$jscomp$0._reactInternals = internalInstance;
+			var contextType$jscomp$0 = type.contextType;
+			JSCompiler_inline_result$jscomp$0.context = "object" === typeof contextType$jscomp$0 && null !== contextType$jscomp$0 ? contextType$jscomp$0._currentValue2 : emptyContextObject;
+			var getDerivedStateFromProps = type.getDerivedStateFromProps;
+			if ("function" === typeof getDerivedStateFromProps) {
+				var partialState = getDerivedStateFromProps(JSCompiler_inline_result, initialState);
+				JSCompiler_inline_result$jscomp$0.state = null === partialState || void 0 === partialState ? initialState : assign({}, initialState, partialState);
 			}
-			else defaultProps.queue = null;
-			type = newProps.render();
-			if (12 === request.status) throw null;
-			props = task.keyPath;
+			if ("function" !== typeof type.getDerivedStateFromProps && "function" !== typeof JSCompiler_inline_result$jscomp$0.getSnapshotBeforeUpdate && ("function" === typeof JSCompiler_inline_result$jscomp$0.UNSAFE_componentWillMount || "function" === typeof JSCompiler_inline_result$jscomp$0.componentWillMount)) {
+				var oldState = JSCompiler_inline_result$jscomp$0.state;
+				"function" === typeof JSCompiler_inline_result$jscomp$0.componentWillMount && JSCompiler_inline_result$jscomp$0.componentWillMount();
+				"function" === typeof JSCompiler_inline_result$jscomp$0.UNSAFE_componentWillMount && JSCompiler_inline_result$jscomp$0.UNSAFE_componentWillMount();
+				oldState !== JSCompiler_inline_result$jscomp$0.state && classComponentUpdater.enqueueReplaceState(JSCompiler_inline_result$jscomp$0, JSCompiler_inline_result$jscomp$0.state, null);
+				if (null !== internalInstance.queue && 0 < internalInstance.queue.length) {
+					var oldQueue = internalInstance.queue, oldReplace = internalInstance.replace;
+					internalInstance.queue = null;
+					internalInstance.replace = !1;
+					if (oldReplace && 1 === oldQueue.length) JSCompiler_inline_result$jscomp$0.state = oldQueue[0];
+					else {
+						for (var nextState = oldReplace ? oldQueue[0] : JSCompiler_inline_result$jscomp$0.state, dontMutate = !0, i = oldReplace ? 1 : 0; i < oldQueue.length; i++) {
+							var partial = oldQueue[i], partialState$jscomp$0 = "function" === typeof partial ? partial.call(JSCompiler_inline_result$jscomp$0, nextState, JSCompiler_inline_result, void 0) : partial;
+							null != partialState$jscomp$0 && (dontMutate ? (dontMutate = !1, nextState = assign({}, nextState, partialState$jscomp$0)) : assign(nextState, partialState$jscomp$0));
+						}
+						JSCompiler_inline_result$jscomp$0.state = nextState;
+					}
+				} else internalInstance.queue = null;
+			}
+			var nextChildren = JSCompiler_inline_result$jscomp$0.render();
+			if (request.aborted) throw null;
+			var prevKeyPath = task.keyPath;
 			task.keyPath = keyPath;
-			renderNodeDestructive(request, task, type, -1);
-			task.keyPath = props;
+			renderNodeDestructive(request, task, nextChildren, -1);
+			task.keyPath = prevKeyPath;
 		} else {
-			type = renderWithHooks(request, task, keyPath, type, props, void 0);
-			if (12 === request.status) throw null;
-			finishFunctionComponent(request, task, keyPath, type, 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
+			var value = renderWithHooks(request, task, keyPath, type, props, void 0);
+			if (request.aborted) throw null;
+			finishFunctionComponent(request, task, keyPath, value, 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
 		}
-		else if ("string" === typeof type) if (newProps = task.blockedSegment, null === newProps) newProps = props.children, defaultProps = task.formatContext, initialState = task.keyPath, task.formatContext = getChildFormatContext(defaultProps, type, props), task.keyPath = keyPath, renderNode(request, task, newProps, -1), task.formatContext = defaultProps, task.keyPath = initialState;
-		else {
-			initialState = pushStartInstance(newProps.chunks, type, props, request.resumableState, request.renderState, task.blockedPreamble, task.hoistableState, task.formatContext, newProps.lastPushedText);
-			newProps.lastPushedText = !1;
-			defaultProps = task.formatContext;
-			ref = task.keyPath;
-			task.keyPath = keyPath;
-			if (3 === (task.formatContext = getChildFormatContext(defaultProps, type, props)).insertionMode) {
-				keyPath = createPendingSegment(request, 0, null, task.formatContext, !1, !1);
-				newProps.preambleChildren.push(keyPath);
-				task.blockedSegment = keyPath;
-				try {
-					keyPath.status = 6, renderNode(request, task, initialState, -1), pushSegmentFinale(keyPath.chunks, request.renderState, keyPath.lastPushedText, keyPath.textEmbedded), keyPath.status = 1;
-				} finally {
-					task.blockedSegment = newProps;
+		else if ("string" === typeof type) {
+			var segment = task.blockedSegment;
+			if (null === segment) {
+				var children = props.children, prevContext = task.formatContext, prevKeyPath$jscomp$0 = task.keyPath;
+				task.formatContext = getChildFormatContext(prevContext, type, props);
+				task.keyPath = keyPath;
+				renderNode(request, task, children, -1);
+				task.formatContext = prevContext;
+				task.keyPath = prevKeyPath$jscomp$0;
+			} else {
+				var children$41 = pushStartInstance(segment.chunks, type, props, request.resumableState, request.renderState, task.blockedPreamble, task.hoistableState, task.formatContext, segment.lastPushedText);
+				segment.lastPushedText = !1;
+				var prevContext$42 = task.formatContext, prevKeyPath$43 = task.keyPath;
+				task.keyPath = keyPath;
+				if (3 === (task.formatContext = getChildFormatContext(prevContext$42, type, props)).insertionMode) {
+					var preambleSegment = createPendingSegment(request, 0, null, task.formatContext, !1, !1);
+					segment.preambleChildren.push(preambleSegment);
+					task.blockedSegment = preambleSegment;
+					try {
+						renderNode(request, task, children$41, -1), pushSegmentFinale(preambleSegment.chunks, request.renderState, preambleSegment.lastPushedText, preambleSegment.textEmbedded), preambleSegment.status = 1;
+					} finally {
+						task.blockedSegment = segment;
+					}
+				} else renderNode(request, task, children$41, -1);
+				task.formatContext = prevContext$42;
+				task.keyPath = prevKeyPath$43;
+				a: {
+					var target = segment.chunks, resumableState = request.resumableState;
+					switch (type) {
+						case "title":
+						case "style":
+						case "script":
+						case "area":
+						case "base":
+						case "br":
+						case "col":
+						case "embed":
+						case "hr":
+						case "img":
+						case "input":
+						case "keygen":
+						case "link":
+						case "meta":
+						case "param":
+						case "source":
+						case "track":
+						case "wbr": break a;
+						case "body":
+							if (1 >= prevContext$42.insertionMode) {
+								resumableState.hasBody = !0;
+								break a;
+							}
+							break;
+						case "html":
+							if (0 === prevContext$42.insertionMode) {
+								resumableState.hasHtml = !0;
+								break a;
+							}
+							break;
+						case "head": if (1 >= prevContext$42.insertionMode) break a;
+					}
+					target.push(endChunkForTag(type));
 				}
-			} else renderNode(request, task, initialState, -1);
-			task.formatContext = defaultProps;
-			task.keyPath = ref;
-			a: {
-				task = newProps.chunks;
-				request = request.resumableState;
-				switch (type) {
-					case "title":
-					case "style":
-					case "script":
-					case "area":
-					case "base":
-					case "br":
-					case "col":
-					case "embed":
-					case "hr":
-					case "img":
-					case "input":
-					case "keygen":
-					case "link":
-					case "meta":
-					case "param":
-					case "source":
-					case "track":
-					case "wbr": break a;
-					case "body":
-						if (1 >= defaultProps.insertionMode) {
-							request.hasBody = !0;
-							break a;
-						}
-						break;
-					case "html":
-						if (0 === defaultProps.insertionMode) {
-							request.hasHtml = !0;
-							break a;
-						}
-						break;
-					case "head": if (1 >= defaultProps.insertionMode) break a;
-				}
-				task.push(endChunkForTag(type));
+				segment.lastPushedText = !1;
 			}
-			newProps.lastPushedText = !1;
-		}
-		else {
+		} else {
 			switch (type) {
 				case REACT_LEGACY_HIDDEN_TYPE:
 				case REACT_STRICT_MODE_TYPE:
 				case REACT_PROFILER_TYPE:
 				case REACT_FRAGMENT_TYPE:
-					type = task.keyPath;
+					var prevKeyPath$jscomp$1 = task.keyPath;
 					task.keyPath = keyPath;
 					renderNodeDestructive(request, task, props.children, -1);
-					task.keyPath = type;
+					task.keyPath = prevKeyPath$jscomp$1;
 					return;
 				case REACT_ACTIVITY_TYPE:
-					type = task.blockedSegment;
-					null === type ? "hidden" !== props.mode && (type = task.keyPath, task.keyPath = keyPath, renderNode(request, task, props.children, -1), task.keyPath = type) : "hidden" !== props.mode && (request.renderState.generateStaticMarkup || type.chunks.push("<!--&-->"), type.lastPushedText = !1, newProps = task.keyPath, task.keyPath = keyPath, renderNode(request, task, props.children, -1), task.keyPath = newProps, request.renderState.generateStaticMarkup || type.chunks.push("<!--/&-->"), type.lastPushedText = !1);
+					var segment$jscomp$0 = task.blockedSegment;
+					if (null === segment$jscomp$0) {
+						if ("hidden" !== props.mode) {
+							var prevKeyPath$jscomp$2 = task.keyPath;
+							task.keyPath = keyPath;
+							renderNode(request, task, props.children, -1);
+							task.keyPath = prevKeyPath$jscomp$2;
+						}
+					} else if ("hidden" !== props.mode) {
+						request.renderState.generateStaticMarkup || segment$jscomp$0.chunks.push("<!--&-->");
+						segment$jscomp$0.lastPushedText = !1;
+						var prevKeyPath$46 = task.keyPath;
+						task.keyPath = keyPath;
+						renderNode(request, task, props.children, -1);
+						task.keyPath = prevKeyPath$46;
+						request.renderState.generateStaticMarkup || segment$jscomp$0.chunks.push("<!--/&-->");
+						segment$jscomp$0.lastPushedText = !1;
+					}
 					return;
 				case REACT_SUSPENSE_LIST_TYPE:
 					a: {
-						type = props.children;
-						props = props.revealOrder;
-						if ("forwards" === props || "backwards" === props || "unstable_legacy-backwards" === props) {
-							if (isArrayImpl(type)) {
-								renderSuspenseListRows(request, task, keyPath, type, props);
+						var children$jscomp$0 = props.children, revealOrder = props.revealOrder;
+						if ("independent" !== revealOrder && "together" !== revealOrder) {
+							if (isArrayImpl(children$jscomp$0)) {
+								renderSuspenseListRows(request, task, keyPath, children$jscomp$0, revealOrder);
 								break a;
 							}
-							if (newProps = getIteratorFn(type)) {
-								if (newProps = newProps.call(type)) {
-									defaultProps = newProps.next();
-									if (!defaultProps.done) {
+							var iteratorFn = getIteratorFn(children$jscomp$0);
+							if (iteratorFn) {
+								var iterator = iteratorFn.call(children$jscomp$0);
+								if (iterator) {
+									var step = iterator.next();
+									if (!step.done) {
 										do
-											defaultProps = newProps.next();
-										while (!defaultProps.done);
-										renderSuspenseListRows(request, task, keyPath, type, props);
+											step = iterator.next();
+										while (!step.done);
+										renderSuspenseListRows(request, task, keyPath, children$jscomp$0, revealOrder);
 									}
 									break a;
 								}
 							}
 						}
-						"together" === props ? (props = task.keyPath, newProps = task.row, defaultProps = task.row = createSuspenseListRow(null), defaultProps.boundaries = [], defaultProps.together = !0, task.keyPath = keyPath, renderNodeDestructive(request, task, type, -1), 0 === --defaultProps.pendingTasks && finishSuspenseListRow(request, defaultProps), task.keyPath = props, task.row = newProps, null !== newProps && 0 < defaultProps.pendingTasks && (newProps.pendingTasks++, defaultProps.next = newProps)) : (props = task.keyPath, task.keyPath = keyPath, renderNodeDestructive(request, task, type, -1), task.keyPath = props);
+						if ("together" === revealOrder) {
+							var prevKeyPath$40 = task.keyPath, prevRow = task.row, newRow = task.row = createSuspenseListRow(null);
+							newRow.boundaries = [];
+							newRow.together = !0;
+							task.keyPath = keyPath;
+							renderNodeDestructive(request, task, children$jscomp$0, -1);
+							0 === --newRow.pendingTasks && finishSuspenseListRow(request, newRow);
+							task.keyPath = prevKeyPath$40;
+							task.row = prevRow;
+							null !== prevRow && 0 < newRow.pendingTasks && (prevRow.pendingTasks++, newRow.next = prevRow);
+						} else {
+							var prevKeyPath$jscomp$3 = task.keyPath;
+							task.keyPath = keyPath;
+							renderNodeDestructive(request, task, children$jscomp$0, -1);
+							task.keyPath = prevKeyPath$jscomp$3;
+						}
 					}
 					return;
 				case REACT_VIEW_TRANSITION_TYPE:
+					var prevContext$jscomp$0 = task.formatContext, prevKeyPath$jscomp$4 = task.keyPath;
+					var resumableState$jscomp$0 = request.resumableState;
+					if (null == props.name || "auto" === props.name) makeId(resumableState$jscomp$0, getTreeId(task.treeContext), 0);
+					task.formatContext = prevContext$jscomp$0;
+					task.keyPath = keyPath;
+					if (null != props.name && "auto" !== props.name) renderNodeDestructive(request, task, props.children, -1);
+					else {
+						var prevTreeContext = task.treeContext;
+						task.treeContext = pushTreeContext(prevTreeContext, 1, 0);
+						renderNode(request, task, props.children, -1);
+						task.treeContext = prevTreeContext;
+					}
+					task.formatContext = prevContext$jscomp$0;
+					task.keyPath = prevKeyPath$jscomp$4;
+					return;
 				case REACT_SCOPE_TYPE: throw Error("ReactDOMServer does not yet support scope components.");
 				case REACT_SUSPENSE_TYPE:
 					a: if (null !== task.replay) {
-						type = task.keyPath;
-						newProps = task.formatContext;
-						defaultProps = task.row;
+						var prevKeyPath$26 = task.keyPath, prevContext$27 = task.formatContext, prevRow$28 = task.row;
 						task.keyPath = keyPath;
-						task.formatContext = getSuspenseContentFormatContext(request.resumableState, newProps);
+						task.formatContext = getSuspenseContentFormatContext(request.resumableState, prevContext$27);
 						task.row = null;
-						keyPath = props.children;
+						var content$29 = props.children;
 						try {
-							renderNode(request, task, keyPath, -1);
+							renderNode(request, task, content$29, -1);
 						} finally {
-							task.keyPath = type, task.formatContext = newProps, task.row = defaultProps;
+							task.keyPath = prevKeyPath$26, task.formatContext = prevContext$27, task.row = prevRow$28;
 						}
 					} else {
-						type = task.keyPath;
-						ref = task.formatContext;
-						var prevRow = task.row, parentBoundary = task.blockedBoundary;
-						propName$43 = task.blockedPreamble;
-						var parentHoistableState = task.hoistableState;
-						propName = task.blockedSegment;
-						var fallback = props.fallback;
-						props = props.children;
-						var fallbackAbortSet = /* @__PURE__ */ new Set();
-						var newBoundary = createSuspenseBoundary(request, task.row, fallbackAbortSet, null, null);
-						null !== request.trackedPostpones && (newBoundary.trackedContentKeyPath = keyPath);
-						var boundarySegment = createPendingSegment(request, propName.chunks.length, newBoundary, task.formatContext, !1, !1);
-						propName.children.push(boundarySegment);
-						propName.lastPushedText = !1;
+						var prevKeyPath$jscomp$5 = task.keyPath, prevContext$jscomp$1 = task.formatContext, prevRow$jscomp$0 = task.row, parentBoundary = task.blockedBoundary, parentPreamble = task.blockedPreamble, parentHoistableState = task.hoistableState, parentSegment = task.blockedSegment, fallback = props.fallback, content = props.children, fallbackAbortSet = /* @__PURE__ */ new Set(), newBoundary = createSuspenseBoundary(request, task.row, fallbackAbortSet, null, !1), boundarySegment = createPendingSegment(request, parentSegment.chunks.length, newBoundary, task.formatContext, !1, !1);
+						parentSegment.children.push(boundarySegment);
+						parentSegment.lastPushedText = !1;
 						var contentRootSegment = createPendingSegment(request, 0, null, task.formatContext, !1, !1);
 						contentRootSegment.parentFlushed = !0;
-						if (null !== request.trackedPostpones) {
-							newProps = task.componentStack;
-							defaultProps = [
+						var trackedPostpones = request.trackedPostpones;
+						if (null !== trackedPostpones) {
+							var suspenseComponentStack = task.componentStack, fallbackKeyPath = [
 								keyPath[0],
 								"Suspense Fallback",
 								keyPath[2]
 							];
-							initialState = [
-								defaultProps[1],
-								defaultProps[2],
-								[],
-								null
-							];
-							request.trackedPostpones.workingMap.set(defaultProps, initialState);
-							newBoundary.trackedFallbackNode = initialState;
+							if (null !== trackedPostpones) {
+								var fallbackReplayNode = [
+									fallbackKeyPath[1],
+									fallbackKeyPath[2],
+									[],
+									null
+								];
+								trackedPostpones.workingMap.set(fallbackKeyPath, fallbackReplayNode);
+								newBoundary.tracked = {
+									contentKeyPath: keyPath,
+									fallbackNode: fallbackReplayNode
+								};
+							}
 							task.blockedSegment = boundarySegment;
-							task.blockedPreamble = newBoundary.fallbackPreamble;
-							task.keyPath = defaultProps;
-							task.formatContext = getSuspenseFallbackFormatContext(request.resumableState, ref);
-							task.componentStack = replaceSuspenseComponentStackWithSuspenseFallbackStack(newProps);
-							boundarySegment.status = 6;
+							task.blockedPreamble = null === newBoundary.preamble ? null : newBoundary.preamble.fallback;
+							task.keyPath = fallbackKeyPath;
+							task.formatContext = getSuspenseFallbackFormatContext(request.resumableState, prevContext$jscomp$1);
+							task.componentStack = replaceSuspenseComponentStackWithSuspenseFallbackStack(suspenseComponentStack);
 							try {
 								renderNode(request, task, fallback, -1), pushSegmentFinale(boundarySegment.chunks, request.renderState, boundarySegment.lastPushedText, boundarySegment.textEmbedded), boundarySegment.status = 1;
 							} catch (thrownValue) {
-								throw boundarySegment.status = 12 === request.status ? 3 : 4, thrownValue;
+								throw boundarySegment.status = request.aborted ? 3 : 4, thrownValue;
 							} finally {
-								task.blockedSegment = propName, task.blockedPreamble = propName$43, task.keyPath = type, task.formatContext = ref;
+								task.blockedSegment = parentSegment, task.blockedPreamble = parentPreamble, task.keyPath = prevKeyPath$jscomp$5, task.formatContext = prevContext$jscomp$1;
 							}
-							task = createRenderTask(request, null, props, -1, newBoundary, contentRootSegment, newBoundary.contentPreamble, newBoundary.contentState, task.abortSet, keyPath, getSuspenseContentFormatContext(request.resumableState, task.formatContext), task.context, task.treeContext, null, newProps);
-							pushComponentStack(task);
-							request.pingedTasks.push(task);
+							var suspendedPrimaryTask = createRenderTask(request, null, content, -1, newBoundary, contentRootSegment, null === newBoundary.preamble ? null : newBoundary.preamble.content, newBoundary.contentState, task.abortSet, keyPath, getSuspenseContentFormatContext(request.resumableState, task.formatContext), task.context, task.treeContext, null, suspenseComponentStack);
+							pushComponentStack(suspendedPrimaryTask);
+							request.pingedTasks.push(suspendedPrimaryTask);
 						} else {
 							task.blockedBoundary = newBoundary;
-							task.blockedPreamble = newBoundary.contentPreamble;
+							task.blockedPreamble = null === newBoundary.preamble ? null : newBoundary.preamble.content;
 							task.hoistableState = newBoundary.contentState;
 							task.blockedSegment = contentRootSegment;
 							task.keyPath = keyPath;
-							task.formatContext = getSuspenseContentFormatContext(request.resumableState, ref);
+							task.formatContext = getSuspenseContentFormatContext(request.resumableState, prevContext$jscomp$1);
 							task.row = null;
-							contentRootSegment.status = 6;
 							try {
-								if (renderNode(request, task, props, -1), pushSegmentFinale(contentRootSegment.chunks, request.renderState, contentRootSegment.lastPushedText, contentRootSegment.textEmbedded), contentRootSegment.status = 1, queueCompletedSegment(newBoundary, contentRootSegment), 0 === newBoundary.pendingTasks && 0 === newBoundary.status) {
+								if (renderNode(request, task, content, -1), pushSegmentFinale(contentRootSegment.chunks, request.renderState, contentRootSegment.lastPushedText, contentRootSegment.textEmbedded), contentRootSegment.status = 1, queueCompletedSegment(newBoundary, contentRootSegment), 0 === newBoundary.pendingTasks && 0 === newBoundary.status) {
 									if (newBoundary.status = 1, !isEligibleForOutlining(request, newBoundary)) {
-										null !== prevRow && 0 === --prevRow.pendingTasks && finishSuspenseListRow(request, prevRow);
+										null !== prevRow$jscomp$0 && 0 === --prevRow$jscomp$0.pendingTasks && finishSuspenseListRow(request, prevRow$jscomp$0);
 										0 === request.pendingRootTasks && task.blockedPreamble && preparePreamble(request);
 										break a;
 									}
-								} else null !== prevRow && prevRow.together && tryToResolveTogetherRow(request, prevRow);
+								} else null !== prevRow$jscomp$0 && prevRow$jscomp$0.together && tryToResolveTogetherRow(request, prevRow$jscomp$0);
 							} catch (thrownValue$30) {
-								newBoundary.status = 4, 12 === request.status ? (contentRootSegment.status = 3, newProps = request.fatalError) : (contentRootSegment.status = 4, newProps = thrownValue$30), defaultProps = getThrownInfo(task.componentStack), initialState = logRecoverableError(request, newProps, defaultProps), newBoundary.errorDigest = initialState, untrackBoundary(request, newBoundary);
+								newBoundary.status = 4;
+								if (request.aborted) {
+									contentRootSegment.status = 3;
+									var error = request.fatalError;
+								} else contentRootSegment.status = 4, error = thrownValue$30;
+								var thrownInfo = getThrownInfo(task.componentStack);
+								newBoundary.errorDigest = logRecoverableError(request, error, thrownInfo);
+								untrackBoundary(request, newBoundary);
 							} finally {
-								task.blockedBoundary = parentBoundary, task.blockedPreamble = propName$43, task.hoistableState = parentHoistableState, task.blockedSegment = propName, task.keyPath = type, task.formatContext = ref, task.row = prevRow;
+								task.blockedBoundary = parentBoundary, task.blockedPreamble = parentPreamble, task.hoistableState = parentHoistableState, task.blockedSegment = parentSegment, task.keyPath = prevKeyPath$jscomp$5, task.formatContext = prevContext$jscomp$1, task.row = prevRow$jscomp$0;
 							}
-							task = createRenderTask(request, null, fallback, -1, parentBoundary, boundarySegment, newBoundary.fallbackPreamble, newBoundary.fallbackState, fallbackAbortSet, [
+							var suspendedFallbackTask = createRenderTask(request, null, fallback, -1, parentBoundary, boundarySegment, null === newBoundary.preamble ? null : newBoundary.preamble.fallback, newBoundary.fallbackState, fallbackAbortSet, [
 								keyPath[0],
 								"Suspense Fallback",
 								keyPath[2]
 							], getSuspenseFallbackFormatContext(request.resumableState, task.formatContext), task.context, task.treeContext, task.row, replaceSuspenseComponentStackWithSuspenseFallbackStack(task.componentStack));
-							pushComponentStack(task);
-							request.pingedTasks.push(task);
+							pushComponentStack(suspendedFallbackTask);
+							request.pingedTasks.push(suspendedFallbackTask);
 						}
 					}
 					return;
 			}
 			if ("object" === typeof type && null !== type) switch (type.$$typeof) {
 				case REACT_FORWARD_REF_TYPE:
-					if ("ref" in props) for (fallback in newProps = {}, props) "ref" !== fallback && (newProps[fallback] = props[fallback]);
-					else newProps = props;
-					type = renderWithHooks(request, task, keyPath, type.render, newProps, ref);
-					finishFunctionComponent(request, task, keyPath, type, 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
+					if ("ref" in props) {
+						var propsWithoutRef = {};
+						for (var key in props) "ref" !== key && (propsWithoutRef[key] = props[key]);
+					} else propsWithoutRef = props;
+					finishFunctionComponent(request, task, keyPath, renderWithHooks(request, task, keyPath, type.render, propsWithoutRef, ref), 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
 					return;
 				case REACT_MEMO_TYPE:
 					renderElement(request, task, keyPath, type.type, props, ref);
 					return;
 				case REACT_CONTEXT_TYPE:
-					defaultProps = props.children;
-					newProps = task.keyPath;
-					props = props.value;
-					initialState = type._currentValue2;
-					type._currentValue2 = props;
-					ref = currentActiveSnapshot;
-					currentActiveSnapshot = type = {
-						parent: ref,
-						depth: null === ref ? 0 : ref.depth + 1,
+					var children$jscomp$2 = props.children, prevKeyPath$jscomp$6 = task.keyPath, nextValue = props.value;
+					var prevValue = type._currentValue2;
+					type._currentValue2 = nextValue;
+					var prevNode = currentActiveSnapshot, newNode = {
+						parent: prevNode,
+						depth: null === prevNode ? 0 : prevNode.depth + 1,
 						context: type,
-						parentValue: initialState,
-						value: props
+						parentValue: prevValue,
+						value: nextValue
 					};
-					task.context = type;
+					currentActiveSnapshot = newNode;
+					task.context = newNode;
 					task.keyPath = keyPath;
-					renderNodeDestructive(request, task, defaultProps, -1);
-					request = currentActiveSnapshot;
-					if (null === request) throw Error("Tried to pop a Context at the root of the app. This is a bug in React.");
-					request.context._currentValue2 = request.parentValue;
-					request = currentActiveSnapshot = request.parent;
-					task.context = request;
-					task.keyPath = newProps;
+					renderNodeDestructive(request, task, children$jscomp$2, -1);
+					var prevSnapshot = currentActiveSnapshot;
+					if (null === prevSnapshot) throw Error("Tried to pop a Context at the root of the app. This is a bug in React.");
+					prevSnapshot.context._currentValue2 = prevSnapshot.parentValue;
+					task.context = currentActiveSnapshot = prevSnapshot.parent;
+					task.keyPath = prevKeyPath$jscomp$6;
 					return;
 				case REACT_CONSUMER_TYPE:
-					props = props.children;
-					type = props(type._context._currentValue2);
-					props = task.keyPath;
+					var render = props.children, newChildren = render(type._context._currentValue2), prevKeyPath$jscomp$7 = task.keyPath;
 					task.keyPath = keyPath;
-					renderNodeDestructive(request, task, type, -1);
-					task.keyPath = props;
+					renderNodeDestructive(request, task, newChildren, -1);
+					task.keyPath = prevKeyPath$jscomp$7;
 					return;
 				case REACT_LAZY_TYPE:
-					newProps = type._init;
-					type = newProps(type._payload);
-					if (12 === request.status) throw null;
-					renderElement(request, task, keyPath, type, props, ref);
+					var init = type._init;
+					var Component = init(type._payload);
+					if (request.aborted) throw null;
+					renderElement(request, task, keyPath, Component, props, ref);
 					return;
 			}
 			throw Error("Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: " + ((null == type ? type : typeof type) + "."));
@@ -8399,7 +8553,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					case REACT_ELEMENT_TYPE:
 						var type = node.type, key = node.key, props = node.props;
 						node = props.ref;
-						var ref = void 0 !== node ? node : null, name = getComponentNameFromType(type), keyOrIndex = null == key ? -1 === childIndex ? 0 : childIndex : key;
+						var ref = void 0 !== node ? node : null, name = getComponentNameFromType(type), keyOrIndex = null == key || key === REACT_OPTIMISTIC_KEY ? -1 === childIndex ? 0 : childIndex : key;
 						key = [
 							task.keyPath,
 							name,
@@ -8413,12 +8567,10 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 								if (keyOrIndex === node$jscomp$0[1]) {
 									if (4 === node$jscomp$0.length) {
 										if (null !== name && name !== node$jscomp$0[0]) throw Error("Expected the resume to render <" + node$jscomp$0[0] + "> in this slot but instead it rendered <" + name + ">. The tree doesn't match so React will fallback to client rendering.");
-										var childNodes = node$jscomp$0[2];
-										name = node$jscomp$0[3];
-										keyOrIndex = task.node;
+										var childNodes = node$jscomp$0[2], childSlots = node$jscomp$0[3], currentNode = task.node;
 										task.replay = {
 											nodes: childNodes,
-											slots: name,
+											slots: childSlots,
 											pendingTasks: 1
 										};
 										try {
@@ -8426,58 +8578,59 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 											if (1 === task.replay.pendingTasks && 0 < task.replay.nodes.length) throw Error("Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering.");
 											task.replay.pendingTasks--;
 										} catch (x) {
-											if ("object" === typeof x && null !== x && (x === SuspenseException || "function" === typeof x.then)) throw task.node === keyOrIndex ? task.replay = replay : childIndex.splice(node, 1), x;
+											if ("object" === typeof x && null !== x && (x === SuspenseException || "function" === typeof x.then || "Maximum call stack size exceeded" === x.message)) throw task.node === currentNode ? task.replay = replay : childIndex.splice(node, 1), x;
 											task.replay.pendingTasks--;
-											props = getThrownInfo(task.componentStack);
-											key = request;
-											request = task.blockedBoundary;
-											type = x;
-											props = logRecoverableError(key, type, props);
-											abortRemainingReplayNodes(key, request, childNodes, name, type, props);
+											key = getThrownInfo(task.componentStack);
+											currentNode = request;
+											props = task.blockedBoundary;
+											request = request.aborted ? request.fatalError : x;
+											key = logRecoverableError(currentNode, request, key);
+											abortRemainingReplayNodes(currentNode, props, childNodes, childSlots, request, key);
 										}
 										task.replay = replay;
 									} else {
 										if (type !== REACT_SUSPENSE_TYPE) throw Error("Expected the resume to render <Suspense> in this slot but instead it rendered <" + (getComponentNameFromType(type) || "Unknown") + ">. The tree doesn't match so React will fallback to client rendering.");
 										b: {
-											replay = void 0;
-											type = node$jscomp$0[5];
-											ref = node$jscomp$0[2];
-											name = node$jscomp$0[3];
-											keyOrIndex = null === node$jscomp$0[4] ? [] : node$jscomp$0[4][2];
+											replay = node$jscomp$0[5];
+											type = node$jscomp$0[2];
+											ref = node$jscomp$0[3];
+											name = null === node$jscomp$0[4] ? [] : node$jscomp$0[4][2];
 											node$jscomp$0 = null === node$jscomp$0[4] ? null : node$jscomp$0[4][3];
-											var prevKeyPath = task.keyPath, prevContext = task.formatContext, prevRow = task.row, previousReplaySet = task.replay, parentBoundary = task.blockedBoundary, parentHoistableState = task.hoistableState, content = props.children, fallback = props.fallback, fallbackAbortSet = /* @__PURE__ */ new Set();
-											props = createSuspenseBoundary(request, task.row, fallbackAbortSet, null, null);
-											props.parentFlushed = !0;
-											props.rootSegmentID = type;
-											task.blockedBoundary = props;
-											task.hoistableState = props.contentState;
+											keyOrIndex = task.keyPath;
+											var prevContext = task.formatContext, prevRow = task.row, previousReplaySet = task.replay, parentBoundary = task.blockedBoundary, parentHoistableState = task.hoistableState, content = props.children;
+											props = props.fallback;
+											var fallbackAbortSet = /* @__PURE__ */ new Set(), resumedBoundary = createSuspenseBoundary(request, task.row, fallbackAbortSet, null, !1);
+											resumedBoundary.parentFlushed = !0;
+											resumedBoundary.rootSegmentID = replay;
+											task.blockedBoundary = resumedBoundary;
+											task.hoistableState = resumedBoundary.contentState;
 											task.keyPath = key;
 											task.formatContext = getSuspenseContentFormatContext(request.resumableState, prevContext);
 											task.row = null;
 											task.replay = {
-												nodes: ref,
-												slots: name,
+												nodes: type,
+												slots: ref,
 												pendingTasks: 1
 											};
 											try {
 												renderNode(request, task, content, -1);
 												if (1 === task.replay.pendingTasks && 0 < task.replay.nodes.length) throw Error("Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering.");
 												task.replay.pendingTasks--;
-												if (0 === props.pendingTasks && 0 === props.status) {
-													props.status = 1;
-													request.completedBoundaries.push(props);
+												if (0 === resumedBoundary.pendingTasks && 0 === resumedBoundary.status) {
+													resumedBoundary.status = 1;
+													request.completedBoundaries.push(resumedBoundary);
 													break b;
 												}
-											} catch (error) {
-												props.status = 4, childNodes = getThrownInfo(task.componentStack), replay = logRecoverableError(request, error, childNodes), props.errorDigest = replay, task.replay.pendingTasks--, request.clientRenderedBoundaries.push(props);
+											} catch (thrownValue) {
+												resumedBoundary.status = 4, childNodes = request.aborted ? request.fatalError : thrownValue, childSlots = getThrownInfo(task.componentStack), currentNode = logRecoverableError(request, childNodes, childSlots), resumedBoundary.errorDigest = currentNode, task.replay.pendingTasks--, request.clientRenderedBoundaries.push(resumedBoundary);
 											} finally {
-												task.blockedBoundary = parentBoundary, task.hoistableState = parentHoistableState, task.replay = previousReplaySet, task.keyPath = prevKeyPath, task.formatContext = prevContext, task.row = prevRow;
+												task.blockedBoundary = parentBoundary, task.hoistableState = parentHoistableState, task.replay = previousReplaySet, task.keyPath = keyOrIndex, task.formatContext = prevContext, task.row = prevRow;
 											}
 											childNodes = createReplayTask(request, null, {
-												nodes: keyOrIndex,
+												nodes: name,
 												slots: node$jscomp$0,
 												pendingTasks: 0
-											}, fallback, -1, parentBoundary, props.fallbackState, fallbackAbortSet, [
+											}, props, -1, parentBoundary, resumedBoundary.fallbackState, fallbackAbortSet, [
 												key[0],
 												"Suspense Fallback",
 												key[2]
@@ -8497,7 +8650,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					case REACT_LAZY_TYPE:
 						childNodes = node._init;
 						node = childNodes(node._payload);
-						if (12 === request.status) throw null;
+						if (request.aborted) throw null;
 						renderNodeDestructive(request, task, node, childIndex);
 						return;
 				}
@@ -8509,11 +8662,11 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					if (childNodes = childNodes.call(node)) {
 						node = childNodes.next();
 						if (!node.done) {
-							props = [];
+							childSlots = [];
 							do
-								props.push(node.value), node = childNodes.next();
+								childSlots.push(node.value), node = childNodes.next();
 							while (!node.done);
-							renderChildrenArray(request, task, props, childIndex);
+							renderChildrenArray(request, task, childSlots, childIndex);
 						}
 						return;
 					}
@@ -8551,10 +8704,12 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					} catch (x) {
 						if ("object" === typeof x && null !== x && (x === SuspenseException || "function" === typeof x.then)) throw x;
 						task.replay.pendingTasks--;
-						children = getThrownInfo(task.componentStack);
-						var boundary = task.blockedBoundary, error = x;
-						children = logRecoverableError(request, error, children);
-						abortRemainingReplayNodes(request, boundary, childIndex, node, error, children);
+						var thrownInfo = getThrownInfo(task.componentStack);
+						children = request;
+						var boundary = task.blockedBoundary;
+						request = request.aborted ? request.fatalError : x;
+						thrownInfo = logRecoverableError(children, request, thrownInfo);
+						abortRemainingReplayNodes(children, boundary, childIndex, node, request, thrownInfo);
 					}
 					task.replay = replay;
 					replayNodes.splice(j, 1);
@@ -8579,18 +8734,21 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	function trackPostponedBoundary(request, trackedPostpones, boundary) {
 		boundary.status = 5;
 		boundary.rootSegmentID = request.nextSegmentId++;
-		request = boundary.trackedContentKeyPath;
+		var tracked = boundary.tracked;
+		if (null === tracked) throw Error("It should not be possible to postpone at the root. This is a bug in React.");
+		request = tracked.contentKeyPath;
 		if (null === request) throw Error("It should not be possible to postpone at the root. This is a bug in React.");
-		var fallbackReplayNode = boundary.trackedFallbackNode, children = [], boundaryNode = trackedPostpones.workingMap.get(request);
+		tracked = tracked.fallbackNode;
+		var children = [], boundaryNode = trackedPostpones.workingMap.get(request);
 		if (void 0 === boundaryNode) return boundary = [
 			request[1],
 			request[2],
 			children,
 			null,
-			fallbackReplayNode,
+			tracked,
 			boundary.rootSegmentID
 		], trackedPostpones.workingMap.set(request, boundary), addToReplayParent(boundary, request[0], trackedPostpones), boundary;
-		boundaryNode[4] = fallbackReplayNode;
+		boundaryNode[4] = tracked;
 		boundaryNode[5] = boundary.rootSegmentID;
 		return boundaryNode;
 	}
@@ -8601,7 +8759,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		else {
 			if (null !== boundary && 0 === boundary.status) {
 				var boundaryNode = trackPostponedBoundary(request, trackedPostpones, boundary);
-				if (boundary.trackedContentKeyPath === keyPath && -1 === task.childIndex) {
+				if (null !== boundary.tracked && boundary.tracked.contentKeyPath === keyPath && -1 === task.childIndex) {
 					-1 === segment.id && (segment.id = segment.parentFlushed ? boundary.rootSegmentID : request.nextSegmentId++);
 					boundaryNode[3] = segment.id;
 					return;
@@ -8632,7 +8790,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	}
 	function untrackBoundary(request, boundary) {
 		request = request.trackedPostpones;
-		null !== request && (boundary = boundary.trackedContentKeyPath, null !== boundary && (boundary = request.workingMap.get(boundary), void 0 !== boundary && (boundary.length = 4, boundary[2] = [], boundary[3] = null)));
+		null !== request && (boundary = boundary.tracked, null !== boundary && (boundary = boundary.contentKeyPath, null !== boundary && (request = request.workingMap.get(boundary), void 0 !== request && (request.length = 4, request[2] = [], request[3] = null))));
 	}
 	function spawnNewSuspendedReplayTask(request, task, thenableState) {
 		return createReplayTask(request, thenableState, task.replay, task.node, task.childIndex, task.blockedBoundary, task.hoistableState, task.abortSet, task.keyPath, task.formatContext, task.context, task.treeContext, task.row, task.componentStack);
@@ -8650,11 +8808,11 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			try {
 				return renderNodeDestructive(request, task, node, childIndex);
 			} catch (thrownValue) {
-				if (resetHooksState(), node = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue, 12 !== request.status && "object" === typeof node && null !== node) {
+				if (resetHooksState(), node = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue, !request.aborted && "object" === typeof node && null !== node) {
 					if ("function" === typeof node.then) {
 						childIndex = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
 						request = spawnNewSuspendedReplayTask(request, task, childIndex).ping;
-						node.then(request, request);
+						node.then(request.resolve, request.reject);
 						task.formatContext = previousFormatContext;
 						task.context = previousContext;
 						task.keyPath = previousKeyPath;
@@ -8683,13 +8841,13 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			var childrenLength = segment.children.length, chunkLength = segment.chunks.length;
 			try {
 				return renderNodeDestructive(request, task, node, childIndex);
-			} catch (thrownValue$62) {
-				if (resetHooksState(), segment.children.length = childrenLength, segment.chunks.length = chunkLength, node = thrownValue$62 === SuspenseException ? getSuspendedThenable() : thrownValue$62, 12 !== request.status && "object" === typeof node && null !== node) {
+			} catch (thrownValue$63) {
+				if (resetHooksState(), segment.children.length = childrenLength, segment.chunks.length = chunkLength, node = thrownValue$63 === SuspenseException ? getSuspendedThenable() : thrownValue$63, !request.aborted && "object" === typeof node && null !== node) {
 					if ("function" === typeof node.then) {
 						segment = node;
-						node = thrownValue$62 === SuspenseException ? getThenableStateAfterSuspending() : null;
+						node = thrownValue$63 === SuspenseException ? getThenableStateAfterSuspending() : null;
 						request = spawnNewSuspendedRenderTask(request, task, node).ping;
-						segment.then(request, request);
+						segment.then(request.resolve, request.reject);
 						task.formatContext = previousFormatContext;
 						task.context = previousContext;
 						task.keyPath = previousKeyPath;
@@ -8699,7 +8857,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						return;
 					}
 					if ("Maximum call stack size exceeded" === node.message) {
-						segment = thrownValue$62 === SuspenseException ? getThenableStateAfterSuspending() : null;
+						segment = thrownValue$63 === SuspenseException ? getThenableStateAfterSuspending() : null;
 						segment = spawnNewSuspendedRenderTask(request, task, segment);
 						request.pingedTasks.push(segment);
 						task.formatContext = previousFormatContext;
@@ -8730,7 +8888,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			if (4 === node.length) abortRemainingReplayNodes(request$jscomp$0, boundary, node[2], node[3], error, errorDigest$jscomp$0);
 			else {
 				node = node[5];
-				var request = request$jscomp$0, errorDigest = errorDigest$jscomp$0, resumedBoundary = createSuspenseBoundary(request, null, /* @__PURE__ */ new Set(), null, null);
+				var request = request$jscomp$0, errorDigest = errorDigest$jscomp$0, resumedBoundary = createSuspenseBoundary(request, null, /* @__PURE__ */ new Set(), null, !1);
 				resumedBoundary.parentFlushed = !0;
 				resumedBoundary.rootSegmentID = node;
 				resumedBoundary.status = 4;
@@ -8745,50 +8903,54 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			if ("object" === typeof slots) for (var index in slots) delete slots[index];
 		}
 	}
-	function abortTask(task, request, error) {
-		var boundary = task.blockedBoundary, segment = task.blockedSegment;
-		if (null !== segment) {
-			if (6 === segment.status) return;
-			segment.status = 3;
-		}
-		var errorInfo = getThrownInfo(task.componentStack);
-		if (null === boundary) {
-			if (13 !== request.status && 14 !== request.status) {
-				boundary = task.replay;
-				if (null === boundary) {
-					null !== request.trackedPostpones && null !== segment ? (boundary = request.trackedPostpones, logRecoverableError(request, error, errorInfo), trackPostpone(request, boundary, task, segment), finishedTask(request, null, task.row, segment)) : (logRecoverableError(request, error, errorInfo), fatalError(request, error));
-					return;
-				}
-				boundary.pendingTasks--;
-				0 === boundary.pendingTasks && 0 < boundary.nodes.length && (segment = logRecoverableError(request, error, errorInfo), abortRemainingReplayNodes(request, null, boundary.nodes, boundary.slots, error, segment));
-				request.pendingRootTasks--;
-				0 === request.pendingRootTasks && completeShell(request);
-			}
-		} else {
-			var trackedPostpones$63 = request.trackedPostpones;
-			if (4 !== boundary.status) {
-				if (null !== trackedPostpones$63 && null !== segment) return logRecoverableError(request, error, errorInfo), trackPostpone(request, trackedPostpones$63, task, segment), boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
-					return abortTask(fallbackTask, request, error);
-				}), boundary.fallbackAbortableTasks.clear(), finishedTask(request, boundary, task.row, segment);
-				boundary.status = 4;
-				segment = logRecoverableError(request, error, errorInfo);
-				boundary.status = 4;
-				boundary.errorDigest = segment;
-				untrackBoundary(request, boundary);
-				boundary.parentFlushed && request.clientRenderedBoundaries.push(boundary);
-			}
-			boundary.pendingTasks--;
-			segment = boundary.row;
-			null !== segment && 0 === --segment.pendingTasks && finishSuspenseListRow(request, segment);
-			boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
-				return abortTask(fallbackTask, request, error);
+	function abortTask(task, request) {
+		if (task !== request.currentTask) {
+			var boundary = task.blockedBoundary;
+			task = task.blockedSegment;
+			null !== task && (task.status = 3);
+			null !== boundary && boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
+				return abortTask(fallbackTask, request);
 			});
-			boundary.fallbackAbortableTasks.clear();
 		}
-		task = task.row;
-		null !== task && 0 === --task.pendingTasks && finishSuspenseListRow(request, task);
-		request.allPendingTasks--;
-		0 === request.allPendingTasks && completeAll(request);
+	}
+	function finishAbortedTask(task, request, error) {
+		if (task !== request.currentTask) {
+			var boundary = task.blockedBoundary, segment = task.blockedSegment;
+			if (null === segment || 3 === segment.status) {
+				var errorInfo = getThrownInfo(task.componentStack), isRecoverableReason = isRecoverableError(error);
+				if (null === boundary) {
+					boundary = task.replay;
+					if (null === boundary) {
+						isRecoverableReason || null === request.trackedPostpones || null === segment ? isRecoverableReason ? (task = cloneRecoverableErrorAsFatal(error), logRecoverableError(request, task, errorInfo), 12 !== request.status && 13 !== request.status && fatalError(request, task)) : (logRecoverableError(request, error, errorInfo), 12 !== request.status && 13 !== request.status && fatalError(request, error)) : (boundary = request.trackedPostpones, logRecoverableError(request, error, errorInfo), trackPostpone(request, boundary, task, segment), finishedTask(request, null, task.row, segment));
+						return;
+					}
+					12 !== request.status && 13 !== request.status && (boundary.pendingTasks--, 0 === boundary.pendingTasks && 0 < boundary.nodes.length && (errorInfo = logRecoverableError(request, error, errorInfo), abortRemainingReplayNodes(request, null, boundary.nodes, boundary.slots, error, errorInfo)), request.pendingRootTasks--, 0 === request.pendingRootTasks && completeShell(request));
+				} else {
+					var trackedPostpones$64 = request.trackedPostpones;
+					if (4 !== boundary.status) {
+						if (!isRecoverableReason && null !== trackedPostpones$64 && null !== segment) return logRecoverableError(request, error, errorInfo), trackPostpone(request, trackedPostpones$64, task, segment), boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
+							return finishAbortedTask(fallbackTask, request, error);
+						}), boundary.fallbackAbortableTasks.clear(), finishedTask(request, boundary, task.row, segment);
+						boundary.status = 4;
+						errorInfo = logRecoverableError(request, error, errorInfo);
+						boundary.errorDigest = errorInfo;
+						untrackBoundary(request, boundary);
+						boundary.parentFlushed && request.clientRenderedBoundaries.push(boundary);
+					}
+					boundary.pendingTasks--;
+					errorInfo = boundary.row;
+					null !== errorInfo && 0 === --errorInfo.pendingTasks && finishSuspenseListRow(request, errorInfo);
+					boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
+						return finishAbortedTask(fallbackTask, request, error);
+					});
+					boundary.fallbackAbortableTasks.clear();
+				}
+				task = task.row;
+				null !== task && 0 === --task.pendingTasks && finishSuspenseListRow(request, task);
+				request.allPendingTasks--;
+				0 === request.allPendingTasks && completeAll(request);
+			}
+		}
 	}
 	function safelyEmitEarlyPreloads(request, shellComplete) {
 		try {
@@ -8826,7 +8988,6 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	function completeShell(request) {
 		null === request.trackedPostpones && safelyEmitEarlyPreloads(request, !0);
 		null === request.trackedPostpones && preparePreamble(request);
-		request.onShellError = noop;
 		request = request.onShellReady;
 		request();
 	}
@@ -8855,7 +9016,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 			request.pendingRootTasks--;
 			0 === request.pendingRootTasks && completeShell(request);
 		} else if (boundary.pendingTasks--, 4 !== boundary.status) if (0 === boundary.pendingTasks) {
-			if (0 === boundary.status && (boundary.status = 1), null !== segment && segment.parentFlushed && (1 === segment.status || 3 === segment.status) && queueCompletedSegment(boundary, segment), boundary.parentFlushed && request.completedBoundaries.push(boundary), 1 === boundary.status) row = boundary.row, null !== row && hoistHoistables(row.hoistables, boundary.contentState), isEligibleForOutlining(request, boundary) || (boundary.fallbackAbortableTasks.forEach(abortTaskSoft, request), boundary.fallbackAbortableTasks.clear(), null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row)), 0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary.contentPreamble && preparePreamble(request);
+			if (0 === boundary.status && (boundary.status = 1), null !== segment && segment.parentFlushed && (1 === segment.status || 3 === segment.status) && queueCompletedSegment(boundary, segment), boundary.parentFlushed && request.completedBoundaries.push(boundary), 1 === boundary.status) row = boundary.row, null !== row && hoistHoistables(row.hoistables, boundary.contentState), isEligibleForOutlining(request, boundary) || (request.allPendingTasks++, boundary.fallbackAbortableTasks.forEach(abortTaskSoft, request), boundary.fallbackAbortableTasks.clear(), null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row), request.allPendingTasks--), 0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary.preamble && preparePreamble(request);
 			else if (5 === boundary.status && (boundary = boundary.row, null !== boundary)) {
 				if (null !== request.trackedPostpones) {
 					row = request.trackedPostpones;
@@ -8866,106 +9027,142 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 						finishedTask(request, postponedBoundary, null, null);
 					}
 				}
+				request.allPendingTasks++;
 				0 === --boundary.pendingTasks && finishSuspenseListRow(request, boundary);
+				request.allPendingTasks--;
 			}
 		} else null === segment || !segment.parentFlushed || 1 !== segment.status && 3 !== segment.status || (queueCompletedSegment(boundary, segment), 1 === boundary.completedSegments.length && boundary.parentFlushed && request.partialBoundaries.push(boundary)), boundary = boundary.row, null !== boundary && boundary.together && tryToResolveTogetherRow(request, boundary);
 		0 === request.allPendingTasks && completeAll(request);
 	}
-	function performWork(request$jscomp$2) {
-		if (14 !== request$jscomp$2.status && 13 !== request$jscomp$2.status) {
+	function performWork(request$jscomp$1) {
+		if (!(request$jscomp$1.aborted || 11 < request$jscomp$1.status)) {
 			var prevContext = currentActiveSnapshot, prevDispatcher = ReactSharedInternals.H;
 			ReactSharedInternals.H = HooksDispatcher;
 			var prevAsyncDispatcher = ReactSharedInternals.A;
 			ReactSharedInternals.A = DefaultAsyncDispatcher;
 			var prevRequest = currentRequest;
-			currentRequest = request$jscomp$2;
+			currentRequest = request$jscomp$1;
 			var prevResumableState = currentResumableState;
-			currentResumableState = request$jscomp$2.resumableState;
+			currentResumableState = request$jscomp$1.resumableState;
 			try {
-				var pingedTasks = request$jscomp$2.pingedTasks, i;
+				var pingedTasks = request$jscomp$1.pingedTasks, i;
 				for (i = 0; i < pingedTasks.length; i++) {
-					var task = pingedTasks[i], request = request$jscomp$2, segment = task.blockedSegment;
+					var task = pingedTasks[i], request = request$jscomp$1, segment = task.blockedSegment;
 					if (null === segment) {
-						var request$jscomp$0 = request;
-						if (0 !== task.replay.pendingTasks) {
+						a: if (0 !== task.replay.pendingTasks) {
+							var prevTask = request.currentTask;
+							request.currentTask = task;
 							switchContext(task.context);
+							var startNode = task.node;
 							try {
-								"number" === typeof task.replay.slots ? resumeNode(request$jscomp$0, task, task.replay.slots, task.node, task.childIndex) : retryNode(request$jscomp$0, task);
+								"number" === typeof task.replay.slots ? resumeNode(request, task, task.replay.slots, task.node, task.childIndex) : retryNode(request, task);
 								if (1 === task.replay.pendingTasks && 0 < task.replay.nodes.length) throw Error("Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering.");
 								task.replay.pendingTasks--;
 								task.abortSet.delete(task);
-								finishedTask(request$jscomp$0, task.blockedBoundary, task.row, null);
+								finishedTask(request, task.blockedBoundary, task.row, null);
 							} catch (thrownValue) {
 								resetHooksState();
 								var x = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue;
-								if ("object" === typeof x && null !== x && "function" === typeof x.then) {
-									var ping = task.ping;
-									x.then(ping, ping);
-									task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
+								if (request.aborted) {
+									thrownValue === SuspenseException && (task.thenableState = getThenableStateAfterSuspending());
+									request.currentTask = prevTask;
+									var request$jscomp$0 = request;
+									abortTask(task, request$jscomp$0);
+									task.abortSet.delete(task);
+									finishAbortedTask(task, request$jscomp$0, request$jscomp$0.fatalError);
 								} else {
+									if ("object" === typeof x && null !== x) {
+										if ("function" === typeof x.then) {
+											var ping = task.ping;
+											x.then(ping.resolve, ping.reject);
+											task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
+											break a;
+										}
+										if ("Maximum call stack size exceeded" === x.message && task.node !== startNode) {
+											task.thenableState = null;
+											request.pingedTasks.push(task);
+											break a;
+										}
+									}
 									task.replay.pendingTasks--;
 									task.abortSet.delete(task);
 									var errorInfo = getThrownInfo(task.componentStack);
-									request = void 0;
-									var request$jscomp$1 = request$jscomp$0, boundary = task.blockedBoundary, error$jscomp$0 = 12 === request$jscomp$0.status ? request$jscomp$0.fatalError : x, replayNodes = task.replay.nodes, resumeSlots = task.replay.slots;
-									request = logRecoverableError(request$jscomp$1, error$jscomp$0, errorInfo);
-									abortRemainingReplayNodes(request$jscomp$1, boundary, replayNodes, resumeSlots, error$jscomp$0, request);
-									request$jscomp$0.pendingRootTasks--;
-									0 === request$jscomp$0.pendingRootTasks && completeShell(request$jscomp$0);
-									request$jscomp$0.allPendingTasks--;
-									0 === request$jscomp$0.allPendingTasks && completeAll(request$jscomp$0);
+									request$jscomp$0 = request;
+									var boundary = task.blockedBoundary, error$jscomp$0 = request.aborted ? request.fatalError : x, replayNodes = task.replay.nodes, resumeSlots = task.replay.slots, errorDigest = logRecoverableError(request$jscomp$0, error$jscomp$0, errorInfo);
+									abortRemainingReplayNodes(request$jscomp$0, boundary, replayNodes, resumeSlots, error$jscomp$0, errorDigest);
+									request.pendingRootTasks--;
+									0 === request.pendingRootTasks && completeShell(request);
+									request.allPendingTasks--;
+									0 === request.allPendingTasks && completeAll(request);
 								}
+							} finally {
+								request.currentTask = prevTask;
 							}
 						}
-					} else if (request$jscomp$0 = void 0, request$jscomp$1 = segment, 0 === request$jscomp$1.status) {
-						request$jscomp$1.status = 6;
+					} else a: if (request$jscomp$0 = segment, 0 === request$jscomp$0.status) {
+						var prevTask$jscomp$0 = request.currentTask;
+						request.currentTask = task;
 						switchContext(task.context);
-						var childrenLength = request$jscomp$1.children.length, chunkLength = request$jscomp$1.chunks.length;
+						var childrenLength = request$jscomp$0.children.length, chunkLength = request$jscomp$0.chunks.length, startNode$jscomp$0 = task.node;
 						try {
-							retryNode(request, task), pushSegmentFinale(request$jscomp$1.chunks, request.renderState, request$jscomp$1.lastPushedText, request$jscomp$1.textEmbedded), task.abortSet.delete(task), request$jscomp$1.status = 1, finishedTask(request, task.blockedBoundary, task.row, request$jscomp$1);
+							retryNode(request, task), pushSegmentFinale(request$jscomp$0.chunks, request.renderState, request$jscomp$0.lastPushedText, request$jscomp$0.textEmbedded), task.abortSet.delete(task), request$jscomp$0.status = 1, finishedTask(request, task.blockedBoundary, task.row, request$jscomp$0);
 						} catch (thrownValue) {
 							resetHooksState();
-							request$jscomp$1.children.length = childrenLength;
-							request$jscomp$1.chunks.length = chunkLength;
-							var x$jscomp$0 = thrownValue === SuspenseException ? getSuspendedThenable() : 12 === request.status ? request.fatalError : thrownValue;
-							if (12 === request.status && null !== request.trackedPostpones) {
-								var trackedPostpones = request.trackedPostpones, thrownInfo = getThrownInfo(task.componentStack);
-								task.abortSet.delete(task);
-								logRecoverableError(request, x$jscomp$0, thrownInfo);
-								trackPostpone(request, trackedPostpones, task, request$jscomp$1);
-								finishedTask(request, task.blockedBoundary, task.row, request$jscomp$1);
-							} else if ("object" === typeof x$jscomp$0 && null !== x$jscomp$0 && "function" === typeof x$jscomp$0.then) {
-								request$jscomp$1.status = 0;
-								task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
-								var ping$jscomp$0 = task.ping;
-								x$jscomp$0.then(ping$jscomp$0, ping$jscomp$0);
-							} else {
+							request$jscomp$0.children.length = childrenLength;
+							request$jscomp$0.chunks.length = chunkLength;
+							var x$jscomp$0 = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue;
+							if (request.aborted) thrownValue === SuspenseException && (task.thenableState = getThenableStateAfterSuspending()), request.currentTask = prevTask$jscomp$0, request$jscomp$0 = request, abortTask(task, request$jscomp$0), task.abortSet.delete(task), finishAbortedTask(task, request$jscomp$0, request$jscomp$0.fatalError);
+							else {
+								if ("object" === typeof x$jscomp$0 && null !== x$jscomp$0) {
+									if ("function" === typeof x$jscomp$0.then) {
+										request$jscomp$0.status = 0;
+										task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
+										var ping$jscomp$0 = task.ping;
+										x$jscomp$0.then(ping$jscomp$0.resolve, ping$jscomp$0.reject);
+										break a;
+									}
+									if ("Maximum call stack size exceeded" === x$jscomp$0.message && task.node !== startNode$jscomp$0) {
+										request$jscomp$0.status = 0;
+										task.thenableState = null;
+										request.pingedTasks.push(task);
+										break a;
+									}
+								}
 								var errorInfo$jscomp$0 = getThrownInfo(task.componentStack);
 								task.abortSet.delete(task);
-								request$jscomp$1.status = 4;
+								request$jscomp$0.status = 4;
 								var boundary$jscomp$0 = task.blockedBoundary, row = task.row;
 								null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row);
 								request.allPendingTasks--;
-								request$jscomp$0 = logRecoverableError(request, x$jscomp$0, errorInfo$jscomp$0);
-								if (null === boundary$jscomp$0) fatalError(request, x$jscomp$0);
-								else if (boundary$jscomp$0.pendingTasks--, 4 !== boundary$jscomp$0.status) {
-									boundary$jscomp$0.status = 4;
-									boundary$jscomp$0.errorDigest = request$jscomp$0;
-									untrackBoundary(request, boundary$jscomp$0);
-									var boundaryRow = boundary$jscomp$0.row;
-									null !== boundaryRow && 0 === --boundaryRow.pendingTasks && finishSuspenseListRow(request, boundaryRow);
-									boundary$jscomp$0.parentFlushed && request.clientRenderedBoundaries.push(boundary$jscomp$0);
-									0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary$jscomp$0.contentPreamble && preparePreamble(request);
+								if (null === boundary$jscomp$0) if (isRecoverableError(x$jscomp$0)) {
+									var fatalRecoverableError = cloneRecoverableErrorAsFatal(x$jscomp$0);
+									logRecoverableError(request, fatalRecoverableError, errorInfo$jscomp$0);
+									fatalError(request, fatalRecoverableError);
+								} else logRecoverableError(request, x$jscomp$0, errorInfo$jscomp$0), fatalError(request, x$jscomp$0);
+								else {
+									var errorDigest$jscomp$0 = logRecoverableError(request, x$jscomp$0, errorInfo$jscomp$0);
+									boundary$jscomp$0.pendingTasks--;
+									if (4 !== boundary$jscomp$0.status) {
+										boundary$jscomp$0.status = 4;
+										boundary$jscomp$0.errorDigest = errorDigest$jscomp$0;
+										untrackBoundary(request, boundary$jscomp$0);
+										var boundaryRow = boundary$jscomp$0.row;
+										null !== boundaryRow && (request.allPendingTasks++, 0 === --boundaryRow.pendingTasks && finishSuspenseListRow(request, boundaryRow), request.allPendingTasks--);
+										boundary$jscomp$0.parentFlushed && request.clientRenderedBoundaries.push(boundary$jscomp$0);
+										0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary$jscomp$0.preamble && preparePreamble(request);
+									}
+									0 === request.allPendingTasks && completeAll(request);
 								}
-								0 === request.allPendingTasks && completeAll(request);
 							}
+						} finally {
+							request.currentTask = prevTask$jscomp$0;
 						}
 					}
 				}
 				pingedTasks.splice(0, i);
-				null !== request$jscomp$2.destination && flushCompletedQueues(request$jscomp$2, request$jscomp$2.destination);
+				null !== request$jscomp$1.destination && flushCompletedQueues(request$jscomp$1, request$jscomp$1.destination);
 			} catch (error) {
-				logRecoverableError(request$jscomp$2, error, {}), fatalError(request$jscomp$2, error);
+				logRecoverableError(request$jscomp$1, error, {}), fatalError(request$jscomp$1, error);
 			} finally {
 				currentResumableState = prevResumableState, ReactSharedInternals.H = prevDispatcher, ReactSharedInternals.A = prevAsyncDispatcher, prevDispatcher === HooksDispatcher && switchContext(prevContext), currentRequest = prevRequest;
 			}
@@ -8979,17 +9176,17 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	function preparePreambleFromSegment(request, segment, collectedPreambleSegments) {
 		var boundary = segment.boundary;
 		if (null === boundary) return preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
-		var preamble = boundary.contentPreamble, fallbackPreamble = boundary.fallbackPreamble;
-		if (null === preamble || null === fallbackPreamble) return !1;
+		var preamble = boundary.preamble;
+		if (null === preamble) return !1;
 		switch (boundary.status) {
 			case 1:
-				hoistPreambleState(request.renderState, preamble);
+				hoistPreambleState(request.renderState, preamble.content);
 				request.byteSize += boundary.byteSize;
 				segment = boundary.completedSegments[0];
 				if (!segment) throw Error("A previously unvisited boundary must have exactly one root segment. This is a bug in React.");
 				return preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
 			case 5: if (null !== request.trackedPostpones) return !0;
-			case 4: if (1 === segment.status) return hoistPreambleState(request.renderState, fallbackPreamble), preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
+			case 4: if (1 === segment.status) return hoistPreambleState(request.renderState, preamble.fallback), preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
 			default: return !0;
 		}
 	}
@@ -9023,17 +9220,18 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	function flushSegment(request, destination, segment, hoistableState) {
 		var boundary = segment.boundary;
 		if (null === boundary) return flushSubtree(request, destination, segment, hoistableState);
+		segment.boundary = null;
 		boundary.parentFlushed = !0;
 		if (4 === boundary.status) {
 			var row = boundary.row;
 			null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row);
-			request.renderState.generateStaticMarkup || (boundary = boundary.errorDigest, destination.push("<!--$!-->"), destination.push("<template"), boundary && (destination.push(" data-dgst=\""), boundary = escapeTextForBrowser(boundary), destination.push(boundary), destination.push("\"")), destination.push("></template>"));
+			request.renderState.generateStaticMarkup || (boundary = boundary.errorDigest, destination.push("<!--$!-->"), destination.push("<template"), null != boundary && (destination.push(" data-dgst=\""), boundary = escapeTextForBrowser(boundary), destination.push(boundary), destination.push("\"")), destination.push("></template>"));
 			flushSubtree(request, destination, segment, hoistableState);
 			request = request.renderState.generateStaticMarkup ? !0 : destination.push("<!--/$-->");
 			return request;
 		}
 		if (1 !== boundary.status) return 0 === boundary.status && (boundary.rootSegmentID = request.nextSegmentId++), 0 < boundary.completedSegments.length && request.partialBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.renderState, boundary.rootSegmentID), hoistableState && hoistHoistables(hoistableState, boundary.fallbackState), flushSubtree(request, destination, segment, hoistableState), destination.push("<!--/$-->");
-		if (!flushingPartialBoundaries && isEligibleForOutlining(request, boundary) && flushedByteSize + boundary.byteSize > request.progressiveChunkSize) return boundary.rootSegmentID = request.nextSegmentId++, request.completedBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.renderState, boundary.rootSegmentID), flushSubtree(request, destination, segment, hoistableState), destination.push("<!--/$-->");
+		if (!flushingPartialBoundaries && isEligibleForOutlining(request, boundary) && (flushedByteSize + boundary.byteSize > request.progressiveChunkSize || boundary.defer)) return boundary.rootSegmentID = request.nextSegmentId++, request.completedBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.renderState, boundary.rootSegmentID), flushSubtree(request, destination, segment, hoistableState), destination.push("<!--/$-->");
 		flushedByteSize += boundary.byteSize;
 		hoistableState && hoistHoistables(hoistableState, boundary.contentState);
 		segment = boundary.row;
@@ -9061,11 +9259,11 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		request = request.renderState;
 		i = boundary.rootSegmentID;
 		boundary = boundary.contentState;
-		var requiresStyleInsertion = request.stylesToHoist;
+		var requiresStyleInsertion = request.stylesToHoist, requiresViewTransitions = 0 !== (completedSegments.instructions & 128);
 		request.stylesToHoist = !1;
 		destination.push(request.startInlineScript);
 		destination.push(">");
-		requiresStyleInsertion ? (0 === (completedSegments.instructions & 4) && (completedSegments.instructions |= 4, destination.push("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};")), 0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, destination.push("$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if(\"/$\"===d||\"/&\"===d)if(0===h)break;else h--;else\"$\"!==d&&\"$?\"!==d&&\"$~\"!==d&&\"$!\"!==d&&\"&\"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data=\"$\";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};\n$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data=\"$~\",$RB.push(a,b),2===$RB.length&&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};")), 0 === (completedSegments.instructions & 8) ? (completedSegments.instructions |= 8, destination.push("$RM=new Map;$RR=function(n,w,p){function u(q){this._p=null;q()}for(var r=new Map,t=document,h,b,e=t.querySelectorAll(\"link[data-precedence],style[data-precedence]\"),v=[],k=0;b=e[k++];)\"not all\"===b.getAttribute(\"media\")?v.push(b):(\"LINK\"===b.tagName&&$RM.set(b.getAttribute(\"href\"),b),r.set(b.dataset.precedence,h=b));e=0;b=[];var l,a;for(k=!0;;){if(k){var f=p[e++];if(!f){k=!1;e=0;continue}var c=!1,m=0;var d=f[m++];if(a=$RM.get(d)){var g=a._p;c=!0}else{a=t.createElement(\"link\");a.href=d;a.rel=\n\"stylesheet\";for(a.dataset.precedence=l=f[m++];g=f[m++];)a.setAttribute(g,f[m++]);g=a._p=new Promise(function(q,x){a.onload=u.bind(a,q);a.onerror=u.bind(a,x)});$RM.set(d,a)}d=a.getAttribute(\"media\");!g||d&&!matchMedia(d).matches||b.push(g);if(c)continue}else{a=v[e++];if(!a)break;l=a.getAttribute(\"data-precedence\");a.removeAttribute(\"media\")}c=r.get(l)||h;c===h&&(h=a);r.set(l,a);c?c.parentNode.insertBefore(a,c.nextSibling):(c=t.head,c.insertBefore(a,c.firstChild))}if(p=document.getElementById(n))p.previousSibling.data=\n\"$~\";Promise.all(b).then($RC.bind(null,n,w),$RX.bind(null,n,\"CSS failed to load\"))};$RR(\"")) : destination.push("$RR(\"")) : (0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, destination.push("$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if(\"/$\"===d||\"/&\"===d)if(0===h)break;else h--;else\"$\"!==d&&\"$?\"!==d&&\"$~\"!==d&&\"$!\"!==d&&\"&\"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data=\"$\";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};\n$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data=\"$~\",$RB.push(a,b),2===$RB.length&&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};")), destination.push("$RC(\""));
+		requiresStyleInsertion ? (0 === (completedSegments.instructions & 4) && (completedSegments.instructions |= 4, destination.push("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,null!=c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};")), 0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, destination.push("$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if(\"/$\"===d||\"/&\"===d)if(0===h)break;else h--;else\"$\"!==d&&\"$?\"!==d&&\"$~\"!==d&&\"$!\"!==d&&\"&\"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data=\"$\";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};\n$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data=\"$~\",$RB.push(a,b),2===$RB.length&&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};")), requiresViewTransitions && 0 === (completedSegments.instructions & 256) && (completedSegments.instructions |= 256, destination.push("$RV=function(B,g){function h(a,c){var e=a.getAttribute(c);e&&(c=a.style,l.push(a,c.viewTransitionName,c.viewTransitionClass),\"auto\"!==e&&(c.viewTransitionClass=e),(a=a.getAttribute(\"vt-name\"))||(a=\"_T_\"+N++ +\"_\"),a=CSS.escape(a)!==a?\"r-\"+btoa(a).replace(/=/g,\"\"):a,c.viewTransitionName=a,C=!0)}var C=!1,N=0,l=[];try{var f=document.__reactViewTransition;if(f){f.finished.finally($RV.bind(null,g));return}var m=new Map;for(f=1;f<g.length;f+=2)for(var k=g[f].querySelectorAll(\"[vt-share]\"),d=0;d<k.length;d++){var b=k[d];m.set(b.getAttribute(\"vt-name\"),b)}var u=[];for(k=0;k<g.length;k+=2){var D=g[k],x=D.parentNode;if(x){var v=x.getBoundingClientRect();if(v.left||v.top||v.width||v.height){b=D;for(f=0;b;){if(8===b.nodeType){var t=b.data;if(\"/$\"===t)if(0===f)break;else f--;else\"$\"!==t&&\"$?\"!==t&&\"$~\"!==t&&\"$!\"!==t||f++}else if(1===b.nodeType){d=b;var E=d.getAttribute(\"vt-name\"),y=m.get(E);h(d,y?\"vt-share\":\"vt-exit\");y&&(h(y,\"vt-share\"),m.set(E,null));for(var F=d.querySelectorAll(\"[vt-share]\"),\nz=0;z<F.length;z++){var G=F[z],H=G.getAttribute(\"vt-name\"),I=m.get(H);I&&(h(G,\"vt-share\"),h(I,\"vt-share\"),m.set(H,null))}var J=d.querySelectorAll(\"[vt-parent-exit]\");for(d=0;d<J.length;d++)h(J[d],\"vt-parent-exit\")}b=b.nextSibling}for(var K=g[k+1],n=K.firstElementChild;n;){null!==m.get(n.getAttribute(\"vt-name\"))&&h(n,\"vt-enter\");var L=n.querySelectorAll(\"[vt-parent-enter]\");for(b=0;b<L.length;b++)h(L[b],\"vt-parent-enter\");n=n.nextElementSibling}b=x;do for(var p=b.firstElementChild;p;){var M=p.getAttribute(\"vt-update\");\nM&&\"none\"!==M&&!l.includes(p)&&h(p,\"vt-update\");p=p.nextElementSibling}while((b=b.parentNode)&&1===b.nodeType&&\"none\"!==b.getAttribute(\"vt-update\"));u.push.apply(u,K.querySelectorAll('img[src]:not([loading=\"lazy\"])'))}}}if(C){var A=document.__reactViewTransition=document.startViewTransition({update:function(){B(g);for(var a=[document.documentElement.clientHeight,document.fonts.ready],c={},e=0;e<u.length;c={g:c.g},e++)if(c.g=u[e],!c.g.complete){var q=c.g.getBoundingClientRect();0<q.bottom&&0<q.right&&\nq.top<window.innerHeight&&q.left<window.innerWidth&&(q=new Promise(function(w){return function(r){w.g.addEventListener(\"load\",r);w.g.addEventListener(\"error\",r)}}(c)),a.push(q))}return Promise.race([Promise.all(a),new Promise(function(w){var r=performance.now();setTimeout(w,2300>r&&2E3<r?2300-r:500)})])},types:[]});A.ready.finally(function(){for(var a=l.length-3;0<=a;a-=3){var c=l[a],e=c.style;e.viewTransitionName=l[a+1];e.viewTransitionClass=l[a+1];\"\"===c.getAttribute(\"style\")&&c.removeAttribute(\"style\")}});\nA.finished.finally(function(){document.__reactViewTransition===A&&(document.__reactViewTransition=null)});$RB=[];return}}catch(a){}B(g)}.bind(null,$RV);")), 0 === (completedSegments.instructions & 8) ? (completedSegments.instructions |= 8, destination.push("$RM=new Map;$RR=function(n,w,p){function u(q){this._p=null;q()}for(var r=new Map,t=document,h,b,e=t.querySelectorAll(\"link[data-precedence],style[data-precedence]\"),v=[],k=0;b=e[k++];)\"not all\"===b.getAttribute(\"media\")?v.push(b):(\"LINK\"===b.tagName&&$RM.set(b.getAttribute(\"href\"),b),r.set(b.dataset.precedence,h=b));e=0;b=[];var l,a;for(k=!0;;){if(k){var f=p[e++];if(!f){k=!1;e=0;continue}var c=!1,m=0;var d=f[m++];if(a=$RM.get(d)){var g=a._p;c=!0}else{a=t.createElement(\"link\");a.href=d;a.rel=\n\"stylesheet\";for(a.dataset.precedence=l=f[m++];g=f[m++];)a.setAttribute(g,f[m++]);g=a._p=new Promise(function(q,x){a.onload=u.bind(a,q);a.onerror=u.bind(a,x)});$RM.set(d,a)}d=a.getAttribute(\"media\");!g||d&&!matchMedia(d).matches||b.push(g);if(c)continue}else{a=v[e++];if(!a)break;l=a.getAttribute(\"data-precedence\");a.removeAttribute(\"media\")}c=r.get(l)||h;c===h&&(h=a);r.set(l,a);c?c.parentNode.insertBefore(a,c.nextSibling):(c=t.head,c.insertBefore(a,c.firstChild))}if(p=document.getElementById(n))p.previousSibling.data=\n\"$~\";Promise.all(b).then($RC.bind(null,n,w),$RX.bind(null,n,\"CSS failed to load\"))};$RR(\"")) : destination.push("$RR(\"")) : (0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, destination.push("$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if(\"/$\"===d||\"/&\"===d)if(0===h)break;else h--;else\"$\"!==d&&\"$?\"!==d&&\"$~\"!==d&&\"$!\"!==d&&\"&\"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data=\"$\";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};\n$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data=\"$~\",$RB.push(a,b),2===$RB.length&&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};")), requiresViewTransitions && 0 === (completedSegments.instructions & 256) && (completedSegments.instructions |= 256, destination.push("$RV=function(B,g){function h(a,c){var e=a.getAttribute(c);e&&(c=a.style,l.push(a,c.viewTransitionName,c.viewTransitionClass),\"auto\"!==e&&(c.viewTransitionClass=e),(a=a.getAttribute(\"vt-name\"))||(a=\"_T_\"+N++ +\"_\"),a=CSS.escape(a)!==a?\"r-\"+btoa(a).replace(/=/g,\"\"):a,c.viewTransitionName=a,C=!0)}var C=!1,N=0,l=[];try{var f=document.__reactViewTransition;if(f){f.finished.finally($RV.bind(null,g));return}var m=new Map;for(f=1;f<g.length;f+=2)for(var k=g[f].querySelectorAll(\"[vt-share]\"),d=0;d<k.length;d++){var b=k[d];m.set(b.getAttribute(\"vt-name\"),b)}var u=[];for(k=0;k<g.length;k+=2){var D=g[k],x=D.parentNode;if(x){var v=x.getBoundingClientRect();if(v.left||v.top||v.width||v.height){b=D;for(f=0;b;){if(8===b.nodeType){var t=b.data;if(\"/$\"===t)if(0===f)break;else f--;else\"$\"!==t&&\"$?\"!==t&&\"$~\"!==t&&\"$!\"!==t||f++}else if(1===b.nodeType){d=b;var E=d.getAttribute(\"vt-name\"),y=m.get(E);h(d,y?\"vt-share\":\"vt-exit\");y&&(h(y,\"vt-share\"),m.set(E,null));for(var F=d.querySelectorAll(\"[vt-share]\"),\nz=0;z<F.length;z++){var G=F[z],H=G.getAttribute(\"vt-name\"),I=m.get(H);I&&(h(G,\"vt-share\"),h(I,\"vt-share\"),m.set(H,null))}var J=d.querySelectorAll(\"[vt-parent-exit]\");for(d=0;d<J.length;d++)h(J[d],\"vt-parent-exit\")}b=b.nextSibling}for(var K=g[k+1],n=K.firstElementChild;n;){null!==m.get(n.getAttribute(\"vt-name\"))&&h(n,\"vt-enter\");var L=n.querySelectorAll(\"[vt-parent-enter]\");for(b=0;b<L.length;b++)h(L[b],\"vt-parent-enter\");n=n.nextElementSibling}b=x;do for(var p=b.firstElementChild;p;){var M=p.getAttribute(\"vt-update\");\nM&&\"none\"!==M&&!l.includes(p)&&h(p,\"vt-update\");p=p.nextElementSibling}while((b=b.parentNode)&&1===b.nodeType&&\"none\"!==b.getAttribute(\"vt-update\"));u.push.apply(u,K.querySelectorAll('img[src]:not([loading=\"lazy\"])'))}}}if(C){var A=document.__reactViewTransition=document.startViewTransition({update:function(){B(g);for(var a=[document.documentElement.clientHeight,document.fonts.ready],c={},e=0;e<u.length;c={g:c.g},e++)if(c.g=u[e],!c.g.complete){var q=c.g.getBoundingClientRect();0<q.bottom&&0<q.right&&\nq.top<window.innerHeight&&q.left<window.innerWidth&&(q=new Promise(function(w){return function(r){w.g.addEventListener(\"load\",r);w.g.addEventListener(\"error\",r)}}(c)),a.push(q))}return Promise.race([Promise.all(a),new Promise(function(w){var r=performance.now();setTimeout(w,2300>r&&2E3<r?2300-r:500)})])},types:[]});A.ready.finally(function(){for(var a=l.length-3;0<=a;a-=3){var c=l[a],e=c.style;e.viewTransitionName=l[a+1];e.viewTransitionClass=l[a+1];\"\"===c.getAttribute(\"style\")&&c.removeAttribute(\"style\")}});\nA.finished.finally(function(){document.__reactViewTransition===A&&(document.__reactViewTransition=null)});$RB=[];return}}catch(a){}B(g)}.bind(null,$RV);")), destination.push("$RC(\""));
 		completedSegments = i.toString(16);
 		destination.push(request.boundaryPrefix);
 		destination.push(completedSegments);
@@ -9205,14 +9403,14 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 					var resumableState$jscomp$1 = request.resumableState, renderState$jscomp$2 = request.renderState, id = boundary.rootSegmentID, errorDigest = boundary.errorDigest;
 					renderState$jscomp$1.push(renderState$jscomp$2.startInlineScript);
 					renderState$jscomp$1.push(">");
-					0 === (resumableState$jscomp$1.instructions & 4) ? (resumableState$jscomp$1.instructions |= 4, renderState$jscomp$1.push("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};;$RX(\"")) : renderState$jscomp$1.push("$RX(\"");
+					0 === (resumableState$jscomp$1.instructions & 4) ? (resumableState$jscomp$1.instructions |= 4, renderState$jscomp$1.push("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,null!=c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};;$RX(\"")) : renderState$jscomp$1.push("$RX(\"");
 					renderState$jscomp$1.push(renderState$jscomp$2.boundaryPrefix);
 					var chunk$jscomp$2 = id.toString(16);
 					renderState$jscomp$1.push(chunk$jscomp$2);
 					renderState$jscomp$1.push("\"");
-					if (errorDigest) {
-						renderState$jscomp$1.push(",");
-						var chunk$jscomp$3 = escapeJSStringsForInstructionScripts(errorDigest || "");
+					if (null != errorDigest) if (renderState$jscomp$1.push(","), null == errorDigest) renderState$jscomp$1.push("null");
+					else {
+						var chunk$jscomp$3 = escapeJSStringsForInstructionScripts(errorDigest);
 						renderState$jscomp$1.push(chunk$jscomp$3);
 					}
 					var JSCompiler_inline_result = renderState$jscomp$1.push(")<\/script>");
@@ -9235,22 +9433,22 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				flushingPartialBoundaries = !0;
 				var partialBoundaries = request.partialBoundaries;
 				for (i = 0; i < partialBoundaries.length; i++) {
-					var boundary$69 = partialBoundaries[i];
+					var boundary$70 = partialBoundaries[i];
 					a: {
 						clientRenderedBoundaries = request;
 						boundary = destination;
-						flushedByteSize = boundary$69.byteSize;
-						var completedSegments = boundary$69.completedSegments;
-						for (JSCompiler_inline_result = 0; JSCompiler_inline_result < completedSegments.length; JSCompiler_inline_result++) if (!flushPartiallyCompletedSegment(clientRenderedBoundaries, boundary, boundary$69, completedSegments[JSCompiler_inline_result])) {
+						flushedByteSize = boundary$70.byteSize;
+						var completedSegments = boundary$70.completedSegments;
+						for (JSCompiler_inline_result = 0; JSCompiler_inline_result < completedSegments.length; JSCompiler_inline_result++) if (!flushPartiallyCompletedSegment(clientRenderedBoundaries, boundary, boundary$70, completedSegments[JSCompiler_inline_result])) {
 							JSCompiler_inline_result++;
 							completedSegments.splice(0, JSCompiler_inline_result);
 							var JSCompiler_inline_result$jscomp$0 = !1;
 							break a;
 						}
 						completedSegments.splice(0, JSCompiler_inline_result);
-						var row = boundary$69.row;
-						null !== row && row.together && 1 === boundary$69.pendingTasks && (1 === row.pendingTasks ? unblockSuspenseListRow(clientRenderedBoundaries, row, row.hoistables) : row.pendingTasks--);
-						JSCompiler_inline_result$jscomp$0 = writeHoistablesForBoundary(boundary, boundary$69.contentState, clientRenderedBoundaries.renderState);
+						var row = boundary$70.row;
+						null !== row && row.together && 1 === boundary$70.pendingTasks && (1 === row.pendingTasks ? unblockSuspenseListRow(clientRenderedBoundaries, row, row.hoistables) : row.pendingTasks--);
+						JSCompiler_inline_result$jscomp$0 = writeHoistablesForBoundary(boundary, boundary$70.contentState, clientRenderedBoundaries.renderState);
 					}
 					if (!JSCompiler_inline_result$jscomp$0) {
 						request.destination = null;
@@ -9271,7 +9469,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 				largeBoundaries.splice(0, i);
 			}
 		} finally {
-			flushingPartialBoundaries = !1, 0 === request.allPendingTasks && 0 === request.clientRenderedBoundaries.length && 0 === request.completedBoundaries.length && (request.flushScheduled = !1, i = request.resumableState, i.hasBody && (partialBoundaries = endChunkForTag("body"), destination.push(partialBoundaries)), i.hasHtml && (i = endChunkForTag("html"), destination.push(i)), request.status = 14, destination.push(null), request.destination = null);
+			flushingPartialBoundaries = !1, i = request.postponedState, null !== i && (i.nextSegmentId = request.nextSegmentId), 0 === request.allPendingTasks && 0 === request.clientRenderedBoundaries.length && 0 === request.completedBoundaries.length && (request.flushScheduled = !1, i = request.resumableState, i.hasBody && (partialBoundaries = endChunkForTag("body"), destination.push(partialBoundaries)), i.hasHtml && (i = endChunkForTag("html"), destination.push(i)), endRenderLifetime(request), request.status = 13, destination.push(null), request.destination = null);
 		}
 	}
 	function enqueueFlush(request) {
@@ -9282,31 +9480,46 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 		}
 	}
 	function startFlowing(request, destination) {
-		if (13 === request.status) request.status = 14, destination.destroy(request.fatalError);
-		else if (14 !== request.status && null === request.destination) {
+		if (12 === request.status) request.status = 13, request = request.fatalError, isRecoverableError(request) && (request = cloneRecoverableErrorAsFatal(request)), destination.destroy(request);
+		else if (13 !== request.status && null === request.destination) {
 			request.destination = destination;
 			try {
 				flushCompletedQueues(request, destination);
-			} catch (error) {
-				logRecoverableError(request, error, {}), fatalError(request, error);
+			} catch (error$72) {
+				logRecoverableError(request, error$72, {}), fatalError(request, error$72);
 			}
 		}
 	}
-	function abort(request, reason) {
-		if (11 === request.status || 10 === request.status) request.status = 12;
+	function finishAbort(request, abortableTasks) {
 		try {
-			var abortableTasks = request.abortableTasks;
 			if (0 < abortableTasks.size) {
-				var error = void 0 === reason ? Error("The render was aborted by the server without a reason.") : "object" === typeof reason && null !== reason && "function" === typeof reason.then ? Error("The render was aborted by the server with a promise.") : reason;
-				request.fatalError = error;
+				var error = request.fatalError;
 				abortableTasks.forEach(function(task) {
-					return abortTask(task, request, error);
+					return finishAbortedTask(task, request, error);
 				});
 				abortableTasks.clear();
 			}
 			null !== request.destination && flushCompletedQueues(request, request.destination);
-		} catch (error$71) {
-			logRecoverableError(request, error$71, {}), fatalError(request, error$71);
+		} catch (error$73) {
+			logRecoverableError(request, error$73, {}), fatalError(request, error$73);
+		}
+	}
+	function endRenderLifetime(request) {
+		request = request.renderLifetimeController;
+		null !== request && request.abort("The render ended.");
+	}
+	function abort(request, reason) {
+		if (!(request.aborted || 11 !== request.status && 10 !== request.status)) {
+			endRenderLifetime(request);
+			var isRecoverableReason = "object" === typeof reason && null !== reason && reason.$$typeof === REACT_RECOVERABLE_TYPE;
+			request.aborted = !0;
+			reason = isRecoverableReason ? createRecoverableError(reason) : void 0 === reason ? Error("The render was aborted by the server without a reason.") : "object" === typeof reason && null !== reason && "function" === typeof reason.then ? Error("The render was aborted by the server with a promise.") : reason;
+			request.fatalError = reason;
+			reason = request.abortableTasks;
+			reason.forEach(function(task) {
+				return abortTask(task, request);
+			});
+			finishAbort(request, reason);
 		}
 	}
 	function addToReplayParent(node, parentKeyPath, trackedPostpones) {
@@ -9326,7 +9539,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	function renderToStringImpl(children, options, generateStaticMarkup, abortReason) {
 		var didFatal = !1, fatalError = null, result = "", readyToStream = !1;
 		options = createResumableState(options ? options.identifierPrefix : void 0);
-		children = createRequest(children, options, createRenderState(options, generateStaticMarkup), createFormatContext(0, null, 0, null), Infinity, onError, void 0, function() {
+		children = createRequest(children, options, createRenderState(options, generateStaticMarkup), createFormatContext(0, null, 0, null), Infinity, onError, void 0, void 0, function() {
 			readyToStream = !0;
 		}, void 0, void 0, void 0);
 		children.flushScheduled = null !== children.destination;
@@ -9354,7 +9567,7 @@ var require_react_dom_server_legacy_node_production = /* @__PURE__ */ __commonJS
 	exports.renderToString = function(children, options) {
 		return renderToStringImpl(children, options, !1, "The server used \"renderToString\" which does not support Suspense. If you intended for this Suspense boundary to render the fallback content on the server consider throwing an Error somewhere within the Suspense boundary. If you intended to have the server wait for the suspended component please switch to \"renderToPipeableStream\" which supports Suspense on the server");
 	};
-	exports.version = "19.2.8";
+	exports.version = "19.3.0";
 }));
 //#endregion
 //#region node_modules/react-dom/cjs/react-dom-server.node.production.js
@@ -9391,12 +9604,14 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	var REACT_LEGACY_HIDDEN_TYPE = Symbol.for("react.legacy_hidden");
 	var REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
 	var REACT_VIEW_TRANSITION_TYPE = Symbol.for("react.view_transition");
+	var REACT_RECOVERABLE_TYPE = Symbol.for("react.recoverable");
 	var MAYBE_ITERATOR_SYMBOL = Symbol.iterator;
 	function getIteratorFn(maybeIterable) {
 		if (null === maybeIterable || "object" !== typeof maybeIterable) return null;
 		maybeIterable = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable["@@iterator"];
 		return "function" === typeof maybeIterable ? maybeIterable : null;
 	}
+	var REACT_OPTIMISTIC_KEY = Symbol.for("react.optimistic_key");
 	var isArrayImpl = Array.isArray;
 	var scheduleMicrotask = queueMicrotask;
 	function flushBuffered(destination) {
@@ -9407,17 +9622,17 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	var destinationHasCapacity$1 = !0;
 	function writeChunk(destination, chunk) {
 		if ("string" === typeof chunk) {
-			if (0 !== chunk.length) if (2048 < 3 * chunk.length) 0 < writtenBytes && (writeToDestination(destination, currentView.subarray(0, writtenBytes)), currentView = /* @__PURE__ */ new Uint8Array(2048), writtenBytes = 0), writeToDestination(destination, chunk);
+			if (0 !== chunk.length) if (4096 < 3 * chunk.length) 0 < writtenBytes && (writeToDestination(destination, currentView.subarray(0, writtenBytes)), currentView = /* @__PURE__ */ new Uint8Array(4096), writtenBytes = 0), writeToDestination(destination, chunk);
 			else {
 				var target = currentView;
 				0 < writtenBytes && (target = currentView.subarray(writtenBytes));
 				target = textEncoder.encodeInto(chunk, target);
 				var read = target.read;
 				writtenBytes += target.written;
-				read < chunk.length && (writeToDestination(destination, currentView.subarray(0, writtenBytes)), currentView = /* @__PURE__ */ new Uint8Array(2048), writtenBytes = textEncoder.encodeInto(chunk.slice(read), currentView).written);
-				2048 === writtenBytes && (writeToDestination(destination, currentView), currentView = /* @__PURE__ */ new Uint8Array(2048), writtenBytes = 0);
+				read < chunk.length && (writeToDestination(destination, currentView.subarray(0, writtenBytes)), currentView = /* @__PURE__ */ new Uint8Array(4096), writtenBytes = textEncoder.encodeInto(chunk.slice(read), currentView).written);
+				4096 === writtenBytes && (writeToDestination(destination, currentView), currentView = /* @__PURE__ */ new Uint8Array(4096), writtenBytes = 0);
 			}
-		} else 0 !== chunk.byteLength && (2048 < chunk.byteLength ? (0 < writtenBytes && (writeToDestination(destination, currentView.subarray(0, writtenBytes)), currentView = /* @__PURE__ */ new Uint8Array(2048), writtenBytes = 0), writeToDestination(destination, chunk)) : (target = currentView.length - writtenBytes, target < chunk.byteLength && (0 === target ? writeToDestination(destination, currentView) : (currentView.set(chunk.subarray(0, target), writtenBytes), writtenBytes += target, writeToDestination(destination, currentView), chunk = chunk.subarray(target)), currentView = /* @__PURE__ */ new Uint8Array(2048), writtenBytes = 0), currentView.set(chunk, writtenBytes), writtenBytes += chunk.byteLength, 2048 === writtenBytes && (writeToDestination(destination, currentView), currentView = /* @__PURE__ */ new Uint8Array(2048), writtenBytes = 0)));
+		} else 0 !== chunk.byteLength && (4096 < chunk.byteLength ? (0 < writtenBytes && (writeToDestination(destination, currentView.subarray(0, writtenBytes)), currentView = /* @__PURE__ */ new Uint8Array(4096), writtenBytes = 0), writeToDestination(destination, chunk)) : (target = currentView.length - writtenBytes, target < chunk.byteLength && (0 === target ? writeToDestination(destination, currentView) : (currentView.set(chunk.subarray(0, target), writtenBytes), writtenBytes += target, writeToDestination(destination, currentView), chunk = chunk.subarray(target)), currentView = /* @__PURE__ */ new Uint8Array(4096), writtenBytes = 0), currentView.set(chunk, writtenBytes), writtenBytes += chunk.byteLength, 4096 === writtenBytes && (writeToDestination(destination, currentView), currentView = /* @__PURE__ */ new Uint8Array(4096), writtenBytes = 0)));
 	}
 	function writeToDestination(destination, view) {
 		destination = destination.write(view);
@@ -9493,6 +9708,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		["markerEnd", "marker-end"],
 		["markerMid", "marker-mid"],
 		["markerStart", "marker-start"],
+		["maskType", "mask-type"],
 		["overlinePosition", "overline-position"],
 		["overlineThickness", "overline-thickness"],
 		["paintOrder", "paint-order"],
@@ -9616,7 +9832,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		var inlineScriptWithNonce = void 0 === externalRuntimeConfig ? startInlineScript : stringToPrecomputedChunk("<script nonce=\"" + escapeTextForBrowser(externalRuntimeConfig) + "\""), nonceStyle = "string" === typeof nonce ? void 0 : nonce && nonce.style, inlineStyleWithNonce = void 0 === nonceStyle ? startInlineStyle : stringToPrecomputedChunk("<style nonce=\"" + escapeTextForBrowser(nonceStyle) + "\""), idPrefix = resumableState.idPrefix, bootstrapChunks = [], bootstrapScriptContent = resumableState.bootstrapScriptContent, bootstrapScripts = resumableState.bootstrapScripts, bootstrapModules = resumableState.bootstrapModules;
 		void 0 !== bootstrapScriptContent && (bootstrapChunks.push(inlineScriptWithNonce), pushCompletedShellIdAttribute(bootstrapChunks, resumableState), bootstrapChunks.push(endOfStartTag, ("" + bootstrapScriptContent).replace(scriptRegex, scriptReplacer), endInlineScript));
 		bootstrapScriptContent = [];
-		void 0 !== importMap && (bootstrapScriptContent.push(importMapScriptStart), bootstrapScriptContent.push(("" + JSON.stringify(importMap)).replace(scriptRegex, scriptReplacer)), bootstrapScriptContent.push(importMapScriptEnd));
+		void 0 !== importMap && (bootstrapScriptContent.push(void 0 === externalRuntimeConfig ? importMapScriptStart : stringToPrecomputedChunk("<script type=\"importmap\" nonce=\"" + escapeTextForBrowser(externalRuntimeConfig) + "\">")), bootstrapScriptContent.push(("" + JSON.stringify(importMap)).replace(scriptRegex, scriptReplacer)), bootstrapScriptContent.push(importMapScriptEnd));
 		importMap = onHeaders ? {
 			preconnects: "",
 			fontPreloads: "",
@@ -9745,7 +9961,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				break;
 			case "html": if (0 === parentContext.insertionMode) return createFormatContext(1, null, subtreeScope, null);
 		}
-		return 6 <= parentContext.insertionMode || 2 > parentContext.insertionMode ? createFormatContext(2, null, subtreeScope, null) : parentContext.tagScope !== subtreeScope ? createFormatContext(parentContext.insertionMode, parentContext.selectedValue, subtreeScope, null) : parentContext;
+		return 6 <= parentContext.insertionMode || 2 > parentContext.insertionMode ? createFormatContext(2, null, subtreeScope, null) : null !== parentContext.viewTransition || parentContext.tagScope !== subtreeScope ? createFormatContext(parentContext.insertionMode, parentContext.selectedValue, subtreeScope, null) : parentContext;
 	}
 	function getSuspenseViewTransition(parentViewTransition) {
 		return null === parentViewTransition ? null : {
@@ -9753,6 +9969,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			enter: "none",
 			exit: "none",
 			share: parentViewTransition.update,
+			parentEnter: "none",
+			parentExit: "none",
 			name: parentViewTransition.autoName,
 			autoName: parentViewTransition.autoName,
 			nameIdx: 0
@@ -9768,12 +9986,21 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		null !== resumableState && "none" !== resumableState.share && (subtreeScope |= 64);
 		return createFormatContext(parentContext.insertionMode, parentContext.selectedValue, subtreeScope, resumableState);
 	}
+	function makeId(resumableState, treeId, localId) {
+		resumableState = "_" + resumableState.idPrefix + "R_" + treeId;
+		0 < localId && (resumableState += "H" + localId.toString(32));
+		return resumableState + "_";
+	}
 	var textSeparator = stringToPrecomputedChunk("<!-- -->");
 	function pushTextInstance(target, text, renderState, textEmbedded) {
 		if ("" === text) return textEmbedded;
 		textEmbedded && target.push(textSeparator);
 		target.push(escapeTextForBrowser(text));
 		return !0;
+	}
+	function pushViewTransitionAttributes(target, formatContext) {
+		formatContext = formatContext.viewTransition;
+		null !== formatContext && ("auto" !== formatContext.name && (pushStringAttribute(target, "vt-name", 0 === formatContext.nameIdx ? formatContext.name : formatContext.name + "_" + formatContext.nameIdx), formatContext.nameIdx++), pushStringAttribute(target, "vt-update", formatContext.update), "none" !== formatContext.enter && pushStringAttribute(target, "vt-enter", formatContext.enter), "none" !== formatContext.exit && pushStringAttribute(target, "vt-exit", formatContext.exit), "none" !== formatContext.share && pushStringAttribute(target, "vt-share", formatContext.share));
 	}
 	var styleNameCache = /* @__PURE__ */ new Map();
 	var styleAttributeStart = stringToPrecomputedChunk(" style=\"");
@@ -9900,6 +10127,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			case "async":
 			case "autoPlay":
 			case "controls":
+			case "credentialless":
 			case "default":
 			case "defer":
 			case "disabled":
@@ -9993,7 +10221,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		return content;
 	}
 	var selectedMarkerAttribute = stringToPrecomputedChunk(" selected=\"\"");
-	var formReplayingRuntimeScript = stringToPrecomputedChunk("addEventListener(\"submit\",function(a){if(!a.defaultPrevented){var c=a.target,d=a.submitter,e=c.action,b=d;if(d){var f=d.getAttribute(\"formAction\");null!=f&&(e=f,b=null)}\"javascript:throw new Error('React form unexpectedly submitted.')\"===e&&(a.preventDefault(),b?(a=document.createElement(\"input\"),a.name=b.name,a.value=b.value,b.parentNode.insertBefore(a,b),b=new FormData(c),a.parentNode.removeChild(a)):b=new FormData(c),a=c.ownerDocument||c,(a.$$reactFormReplay=a.$$reactFormReplay||[]).push(c,d,b))}});");
+	var formReplayingRuntimeScript = stringToPrecomputedChunk("addEventListener(\"submit\",function(a){if(!a.defaultPrevented){var b=a.target,d=a.submitter,c=b.action,e=d;if(d){var f=d.getAttribute(\"formAction\");null!=f&&(c=f,e=null)}\"javascript:throw new Error('React form unexpectedly submitted.')\"===c&&(a.preventDefault(),a=new FormData(b,e),c=b.ownerDocument||b,(c.$$reactFormReplay=c.$$reactFormReplay||[]).push(b,d,a))}});");
 	function injectFormReplayingRuntime(resumableState, renderState) {
 		if (0 === (resumableState.instructions & 16)) {
 			resumableState.instructions |= 16;
@@ -10020,7 +10248,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	function styleReplacer(match, prefix, s, suffix) {
 		return "" + prefix + ("s" === s ? "\\73 " : "\\53 ") + suffix;
 	}
-	function pushSelfClosing(target, props, tag) {
+	function pushSelfClosing(target, props, tag, formatContext) {
 		target.push(startChunkForTag(tag));
 		for (var propKey in props) if (hasOwnProperty.call(props, propKey)) {
 			var propValue = props[propKey];
@@ -10030,6 +10258,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				default: pushAttribute(target, propKey, propValue);
 			}
 		}
+		pushViewTransitionAttributes(target, formatContext);
 		target.push(endOfStartTagSelfClosing);
 		return null;
 	}
@@ -10079,7 +10308,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		target.push(endChunkForTag("script"));
 		return null;
 	}
-	function pushStartSingletonElement(target, props, tag) {
+	function pushStartSingletonElement(target, props, tag, formatContext) {
 		target.push(startChunkForTag(tag));
 		var innerHTML = tag = null, propKey;
 		for (propKey in props) if (hasOwnProperty.call(props, propKey)) {
@@ -10094,11 +10323,12 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				default: pushAttribute(target, propKey, propValue);
 			}
 		}
+		pushViewTransitionAttributes(target, formatContext);
 		target.push(endOfStartTag);
 		pushInnerHTML(target, innerHTML, tag);
 		return tag;
 	}
-	function pushStartGenericElement(target, props, tag) {
+	function pushStartGenericElement(target, props, tag, formatContext) {
 		target.push(startChunkForTag(tag));
 		var innerHTML = tag = null, propKey;
 		for (propKey in props) if (hasOwnProperty.call(props, propKey)) {
@@ -10113,6 +10343,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				default: pushAttribute(target, propKey, propValue);
 			}
 		}
+		pushViewTransitionAttributes(target, formatContext);
 		target.push(endOfStartTag);
 		pushInnerHTML(target, innerHTML, tag);
 		return "string" === typeof tag ? (target.push(escapeTextForBrowser(tag)), null) : tag;
@@ -10154,6 +10385,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						default: pushAttribute(target$jscomp$0, propKey, propValue);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				pushInnerHTML(target$jscomp$0, innerHTML, children);
 				if ("string" === typeof children) {
@@ -10181,6 +10413,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$0, propValue$jscomp$0);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$0, children$jscomp$0);
 				return children$jscomp$0;
@@ -10236,6 +10469,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					}
 				}
 				null === value$jscomp$0 && null !== defaultValue && (value$jscomp$0 = defaultValue);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				if (null != children$jscomp$2) {
 					if (null != value$jscomp$0) throw Error("If you supply `defaultValue` on a <textarea>, do not pass children.");
@@ -10289,6 +10523,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				var formData = pushFormActionAttribute(target$jscomp$0, resumableState, renderState, formAction, formEncType, formMethod, formTarget, name);
 				null !== checked ? pushBooleanAttribute(target$jscomp$0, "checked", checked) : null !== defaultChecked && pushBooleanAttribute(target$jscomp$0, "checked", defaultChecked);
 				null !== value$jscomp$1 ? pushAttribute(target$jscomp$0, "value", value$jscomp$1) : null !== defaultValue$jscomp$0 && pushAttribute(target$jscomp$0, "value", defaultValue$jscomp$0);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTagSelfClosing);
 				formData?.forEach(pushAdditionalFormField, target$jscomp$0);
 				return null;
@@ -10323,6 +10558,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					}
 				}
 				var formData$jscomp$0 = pushFormActionAttribute(target$jscomp$0, resumableState, renderState, formAction$jscomp$0, formEncType$jscomp$0, formMethod$jscomp$0, formTarget$jscomp$0, name$jscomp$0);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				formData$jscomp$0?.forEach(pushAdditionalFormField, target$jscomp$0);
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$2, children$jscomp$3);
@@ -10367,6 +10603,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				null != formEncType$jscomp$1 && pushAttribute(target$jscomp$0, "encType", formEncType$jscomp$1);
 				null != formMethod$jscomp$1 && pushAttribute(target$jscomp$0, "method", formMethod$jscomp$1);
 				null != formTarget$jscomp$1 && pushAttribute(target$jscomp$0, "target", formTarget$jscomp$1);
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				null !== formActionName && (target$jscomp$0.push(startHiddenInputChunk), pushStringAttribute(target$jscomp$0, "name", formActionName), target$jscomp$0.push(endOfStartTagSelfClosing), formData$jscomp$1?.forEach(pushAdditionalFormField, target$jscomp$0));
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$3, children$jscomp$4);
@@ -10385,6 +10622,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$6, propValue$jscomp$6);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				return null;
 			case "object":
@@ -10407,6 +10645,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$7, propValue$jscomp$7);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$4, children$jscomp$5);
 				if ("string" === typeof children$jscomp$5) {
@@ -10542,8 +10781,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				return JSCompiler_inline_result$jscomp$6;
 			case "meta":
 				var noscriptTagInScope$jscomp$3 = formatContext.tagScope & 1, isFallback$jscomp$1 = formatContext.tagScope & 4;
-				if (4 === formatContext.insertionMode || noscriptTagInScope$jscomp$3 || null != props.itemProp) var JSCompiler_inline_result$jscomp$7 = pushSelfClosing(target$jscomp$0, props, "meta");
-				else textEmbedded && target$jscomp$0.push(textSeparator), JSCompiler_inline_result$jscomp$7 = isFallback$jscomp$1 ? null : "string" === typeof props.charSet ? pushSelfClosing(renderState.charsetChunks, props, "meta") : "viewport" === props.name ? pushSelfClosing(renderState.viewportChunks, props, "meta") : pushSelfClosing(renderState.hoistableChunks, props, "meta");
+				if (4 === formatContext.insertionMode || noscriptTagInScope$jscomp$3 || null != props.itemProp) var JSCompiler_inline_result$jscomp$7 = pushSelfClosing(target$jscomp$0, props, "meta", formatContext);
+				else textEmbedded && target$jscomp$0.push(textSeparator), JSCompiler_inline_result$jscomp$7 = isFallback$jscomp$1 ? null : "string" === typeof props.charSet ? pushSelfClosing(renderState.charsetChunks, props, "meta", formatContext) : "viewport" === props.name ? pushSelfClosing(renderState.viewportChunks, props, "meta", formatContext) : pushSelfClosing(renderState.hoistableChunks, props, "meta", formatContext);
 				return JSCompiler_inline_result$jscomp$7;
 			case "listing":
 			case "pre":
@@ -10561,6 +10800,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						default: pushAttribute(target$jscomp$0, propKey$jscomp$10, propValue$jscomp$10);
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				if (null != innerHTML$jscomp$7) {
 					if (null != children$jscomp$8) throw Error("Can only set one of `children` or `props.dangerouslySetInnerHTML`.");
@@ -10590,7 +10830,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 							nonce: props.nonce,
 							type: props.type,
 							fetchPriority: props.fetchPriority,
-							referrerPolicy: props.refererPolicy
+							referrerPolicy: props.referrerPolicy
 						}), 0 <= (headers.remainingCapacity -= header.length + 2)) ? (renderState.resets.image[key$jscomp$0] = PRELOAD_NO_CREDS, headers.highImagePreloads && (headers.highImagePreloads += ", "), headers.highImagePreloads += header) : (resource$jscomp$1 = [], pushLinkImpl(resource$jscomp$1, {
 							rel: "preload",
 							as: "image",
@@ -10605,7 +10845,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						}), "high" === props.fetchPriority || 10 > renderState.highImagePreloads.size ? renderState.highImagePreloads.add(resource$jscomp$1) : (renderState.bulkPreloads.add(resource$jscomp$1), promotablePreloads.set(key$jscomp$0, resource$jscomp$1)));
 					}
 				}
-				return pushSelfClosing(target$jscomp$0, props, "img");
+				return pushSelfClosing(target$jscomp$0, props, "img", formatContext);
 			case "base":
 			case "area":
 			case "br":
@@ -10616,7 +10856,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			case "param":
 			case "source":
 			case "track":
-			case "wbr": return pushSelfClosing(target$jscomp$0, props, type);
+			case "wbr": return pushSelfClosing(target$jscomp$0, props, type, formatContext);
 			case "annotation-xml":
 			case "color-profile":
 			case "font-face":
@@ -10631,8 +10871,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					if (preamble.headChunks) throw Error("The `<head>` tag may only be rendered once.");
 					null !== preambleState && target$jscomp$0.push(headPreambleContributionChunk);
 					preamble.headChunks = [];
-					var JSCompiler_inline_result$jscomp$9 = pushStartSingletonElement(preamble.headChunks, props, "head");
-				} else JSCompiler_inline_result$jscomp$9 = pushStartGenericElement(target$jscomp$0, props, "head");
+					var JSCompiler_inline_result$jscomp$9 = pushStartSingletonElement(preamble.headChunks, props, "head", formatContext);
+				} else JSCompiler_inline_result$jscomp$9 = pushStartGenericElement(target$jscomp$0, props, "head", formatContext);
 				return JSCompiler_inline_result$jscomp$9;
 			case "body":
 				if (2 > formatContext.insertionMode) {
@@ -10640,8 +10880,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					if (preamble$jscomp$0.bodyChunks) throw Error("The `<body>` tag may only be rendered once.");
 					null !== preambleState && target$jscomp$0.push(bodyPreambleContributionChunk);
 					preamble$jscomp$0.bodyChunks = [];
-					var JSCompiler_inline_result$jscomp$10 = pushStartSingletonElement(preamble$jscomp$0.bodyChunks, props, "body");
-				} else JSCompiler_inline_result$jscomp$10 = pushStartGenericElement(target$jscomp$0, props, "body");
+					var JSCompiler_inline_result$jscomp$10 = pushStartSingletonElement(preamble$jscomp$0.bodyChunks, props, "body", formatContext);
+				} else JSCompiler_inline_result$jscomp$10 = pushStartGenericElement(target$jscomp$0, props, "body", formatContext);
 				return JSCompiler_inline_result$jscomp$10;
 			case "html":
 				if (0 === formatContext.insertionMode) {
@@ -10649,8 +10889,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					if (preamble$jscomp$1.htmlChunks) throw Error("The `<html>` tag may only be rendered once.");
 					null !== preambleState && target$jscomp$0.push(htmlPreambleContributionChunk);
 					preamble$jscomp$1.htmlChunks = [doctypeChunk];
-					var JSCompiler_inline_result$jscomp$11 = pushStartSingletonElement(preamble$jscomp$1.htmlChunks, props, "html");
-				} else JSCompiler_inline_result$jscomp$11 = pushStartGenericElement(target$jscomp$0, props, "html");
+					var JSCompiler_inline_result$jscomp$11 = pushStartSingletonElement(preamble$jscomp$1.htmlChunks, props, "html", formatContext);
+				} else JSCompiler_inline_result$jscomp$11 = pushStartGenericElement(target$jscomp$0, props, "html", formatContext);
 				return JSCompiler_inline_result$jscomp$11;
 			default: if (-1 !== type.indexOf("-")) {
 				target$jscomp$0.push(startChunkForTag(type));
@@ -10681,12 +10921,13 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						}
 					}
 				}
+				pushViewTransitionAttributes(target$jscomp$0, formatContext);
 				target$jscomp$0.push(endOfStartTag);
 				pushInnerHTML(target$jscomp$0, innerHTML$jscomp$8, children$jscomp$9);
 				return children$jscomp$9;
 			}
 		}
-		return pushStartGenericElement(target$jscomp$0, props, type);
+		return pushStartGenericElement(target$jscomp$0, props, type, formatContext);
 	}
 	var endTagCache = /* @__PURE__ */ new Map();
 	function endChunkForTag(tag) {
@@ -10798,11 +11039,12 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	stringToPrecomputedChunk("<template data-rri=\"\" data-bid=\"");
 	stringToPrecomputedChunk("\" data-sid=\"");
 	stringToPrecomputedChunk("\" data-sty=\"");
-	var clientRenderScriptFunctionOnly = stringToPrecomputedChunk("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};");
-	var clientRenderScript1Full = stringToPrecomputedChunk("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};;$RX(\"");
+	var clientRenderScriptFunctionOnly = stringToPrecomputedChunk("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,null!=c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};");
+	var clientRenderScript1Full = stringToPrecomputedChunk("$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data=\"$!\",a=a.dataset,null!=c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};;$RX(\"");
 	var clientRenderScript1Partial = stringToPrecomputedChunk("$RX(\"");
 	var clientRenderScript1A = stringToPrecomputedChunk("\"");
 	var clientRenderErrorScriptArgInterstitial = stringToPrecomputedChunk(",");
+	var clientRenderErrorScriptNull = stringToPrecomputedChunk("null");
 	var clientRenderScriptEnd = stringToPrecomputedChunk(")<\/script>");
 	stringToPrecomputedChunk("<template data-rxi=\"\" data-bid=\"");
 	stringToPrecomputedChunk("\" data-dgst=\"");
@@ -11138,7 +11380,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						break;
 					default:
 						if (resumableState.moduleUnknownResources.hasOwnProperty(as)) {
-							var resources = resumableState.unknownResources[as];
+							var resources = resumableState.moduleUnknownResources[as];
 							if (resources.hasOwnProperty(href)) return;
 						} else resources = {}, resumableState.moduleUnknownResources[as] = resources;
 						as = [];
@@ -11247,8 +11489,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		childState.stylesheets.forEach(hoistStylesheetDependency, parentState);
 		childState.suspenseyImages && (parentState.suspenseyImages = !0);
 	}
-	function hasSuspenseyContent(hoistableState) {
-		return 0 < hoistableState.stylesheets.size || hoistableState.suspenseyImages;
+	function hasSuspenseyContent(hoistableState, flushingInShell) {
+		return flushingInShell ? hoistableState.suspenseyImages : 0 < hoistableState.stylesheets.size || hoistableState.suspenseyImages;
 	}
 	var bind = Function.prototype.bind;
 	var requestStorage = new async_hooks.AsyncLocalStorage();
@@ -11264,6 +11506,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			case REACT_SUSPENSE_TYPE: return "Suspense";
 			case REACT_SUSPENSE_LIST_TYPE: return "SuspenseList";
 			case REACT_ACTIVITY_TYPE: return "Activity";
+			case REACT_VIEW_TRANSITION_TYPE: return "ViewTransition";
 		}
 		if ("object" === typeof type) switch (type.$$typeof) {
 			case REACT_PORTAL_TYPE: return "Portal";
@@ -11342,6 +11585,11 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		id: 1,
 		overflow: ""
 	};
+	function getTreeId(context) {
+		var overflow = context.overflow;
+		context = context.id;
+		return (context & ~(1 << 32 - clz32(context) - 1)).toString(32) + overflow;
+	}
 	function pushTreeContext(baseContext, totalChildren, index) {
 		var baseIdWithLeadingBit = baseContext.id;
 		baseContext = baseContext.overflow;
@@ -11378,7 +11626,10 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		void 0 === index ? thenableState.push(thenable) : index !== thenable && (thenable.then(noop, noop), thenable = index);
 		switch (thenable.status) {
 			case "fulfilled": return thenable.value;
-			case "rejected": throw thenable.reason;
+			case "rejected":
+				thenableState = thenable.reason;
+				if (void 0 === thenableState && !("reason" in thenable)) throw Error("A rejected Promise was passed to React without a `reason` property. React threw a generic error from where the Promise was used to assist in identifying the problematic Promise. Make sure that instrumented Promises correctly set the `reason` property when setting `status` to `'rejected'`.");
+				throw thenableState;
 			default:
 				"string" === typeof thenable.status ? thenable.then(noop, noop) : (thenableState = thenable, thenableState.status = "pending", thenableState.then(function(fulfilledValue) {
 					if ("pending" === thenable.status) {
@@ -11425,6 +11676,30 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	var actionStateMatchingIndex = -1;
 	var thenableIndexCounter = 0;
 	var thenableState = null;
+	function createRecoverableError(recoverable) {
+		recoverable = recoverable._reason;
+		if ("function" === typeof recoverable) try {
+			var initializedReason = recoverable();
+		} catch ($jscomp$unused$catch) {
+			initializedReason = "The reason for browser-only rendering could not be determined because its initializer threw.";
+		}
+		else initializedReason = recoverable;
+		initializedReason = Error("Browser-only rendering was requested by `browser()`.", void 0 === recoverable ? void 0 : { cause: initializedReason });
+		Object.defineProperty(initializedReason, REACT_RECOVERABLE_TYPE, { value: !0 });
+		return initializedReason;
+	}
+	function isRecoverableError(error) {
+		return "object" !== typeof error || null === error ? !1 : !0 === error[REACT_RECOVERABLE_TYPE];
+	}
+	function cloneRecoverableErrorAsFatal(recoverableError) {
+		var fatalRecoverableError = Error("The server render could not complete because client rendering was requested outside a Suspense boundary. See this error's cause for additional details.", hasOwnProperty.call(recoverableError, "cause") ? { cause: recoverableError.cause } : void 0);
+		recoverableError = recoverableError.stack;
+		if (void 0 !== recoverableError) {
+			var frameStart = recoverableError.indexOf("\n");
+			fatalRecoverableError.stack = fatalRecoverableError.name + ": " + fatalRecoverableError.message + (-1 === frameStart ? "" : recoverableError.slice(frameStart));
+		} else fatalRecoverableError.stack = void 0;
+		return fatalRecoverableError;
+	}
 	var renderPhaseUpdates = null;
 	var numberOfReRenders = 0;
 	function resolveCurrentlyRenderingComponent() {
@@ -11591,6 +11866,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		use: function(usable) {
 			if (null !== usable && "object" === typeof usable) {
 				if ("function" === typeof usable.then) return unwrapThenable(usable);
+				if (usable.$$typeof === REACT_RECOVERABLE_TYPE) throw createRecoverableError(usable);
 				if (usable.$$typeof === REACT_CONTEXT_TYPE) return usable._currentValue;
 			}
 			throw Error("An unsupported type was passed to use(): " + String(usable));
@@ -11629,16 +11905,9 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			return [!1, unsupportedStartTransition];
 		},
 		useId: function() {
-			var JSCompiler_inline_result = currentlyRenderingTask.treeContext;
-			var overflow = JSCompiler_inline_result.overflow;
-			JSCompiler_inline_result = JSCompiler_inline_result.id;
-			JSCompiler_inline_result = (JSCompiler_inline_result & ~(1 << 32 - clz32(JSCompiler_inline_result) - 1)).toString(32) + overflow;
-			var resumableState = currentResumableState;
+			var treeId = getTreeId(currentlyRenderingTask.treeContext), resumableState = currentResumableState;
 			if (null === resumableState) throw Error("Invalid hook call. Hooks can only be called inside of the body of a function component.");
-			overflow = localIdCounter++;
-			JSCompiler_inline_result = "_" + resumableState.idPrefix + "R_" + JSCompiler_inline_result;
-			0 < overflow && (JSCompiler_inline_result += "H" + overflow.toString(32));
-			return JSCompiler_inline_result + "_";
+			return makeId(resumableState, treeId, localIdCounter++);
 		},
 		useSyncExternalStore: function(subscribe, getSnapshot, getServerSnapshot) {
 			if (void 0 === getServerSnapshot) throw Error("Missing getServerSnapshot, which is required for server-rendered content. Will revert to client rendering.");
@@ -11720,7 +11989,20 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 							} catch (x$24) {
 								control = x$24;
 							}
-							fn.call(Fake.prototype);
+							Fake = !1;
+							try {
+								var prevProps = Object.getOwnPropertyDescriptor(fn.prototype, "props");
+								Object.defineProperty(fn.prototype, "props", {
+									configurable: !0,
+									set: function() {
+										throw Error();
+									}
+								});
+								Fake = !0;
+								new fn();
+							} finally {
+								Fake && (void 0 !== prevProps ? Object.defineProperty(fn.prototype, "props", prevProps) : delete fn.prototype.props);
+							}
 						}
 					} else {
 						try {
@@ -11794,11 +12076,17 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		switch (type) {
 			case REACT_SUSPENSE_LIST_TYPE: return describeBuiltInComponentFrame("SuspenseList");
 			case REACT_SUSPENSE_TYPE: return describeBuiltInComponentFrame("Suspense");
+			case REACT_VIEW_TRANSITION_TYPE: return describeBuiltInComponentFrame("ViewTransition");
 		}
 		return "";
 	}
+	function getViewTransitionClassName(defaultClass, eventClass) {
+		defaultClass = null == defaultClass || "string" === typeof defaultClass ? defaultClass : defaultClass.default;
+		eventClass = null == eventClass || "string" === typeof eventClass ? eventClass : eventClass.default;
+		return null == eventClass ? "auto" === defaultClass ? null : defaultClass : "auto" === eventClass ? null : eventClass;
+	}
 	function isEligibleForOutlining(request, boundary) {
-		return (500 < boundary.byteSize || hasSuspenseyContent(boundary.contentState)) && null === boundary.contentPreamble;
+		return (500 < boundary.byteSize || hasSuspenseyContent(boundary.contentState, !1) || boundary.defer) && null === boundary.preamble;
 	}
 	function defaultErrorHandler(error) {
 		if ("object" === typeof error && null !== error && "string" === typeof error.environmentName) {
@@ -11811,7 +12099,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		} else console.error(error);
 		return null;
 	}
-	function RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, formState) {
+	function RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, formState) {
 		var abortSet = /* @__PURE__ */ new Set();
 		this.destination = null;
 		this.flushScheduled = !1;
@@ -11821,25 +12109,28 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		this.progressiveChunkSize = void 0 === progressiveChunkSize ? 12800 : progressiveChunkSize;
 		this.status = 10;
 		this.fatalError = null;
+		this.aborted = !1;
 		this.pendingRootTasks = this.allPendingTasks = this.nextSegmentId = 0;
 		this.completedPreambleSegments = this.completedRootSegment = null;
 		this.byteSize = 0;
 		this.abortableTasks = abortSet;
 		this.pingedTasks = [];
+		this.currentTask = null;
 		this.clientRenderedBoundaries = [];
 		this.completedBoundaries = [];
 		this.partialBoundaries = [];
-		this.trackedPostpones = null;
+		this.postponedState = this.trackedPostpones = null;
 		this.onError = void 0 === onError ? defaultErrorHandler : onError;
-		this.onPostpone = void 0 === onPostpone ? noop : onPostpone;
+		this.onBrowserBailout = void 0 === onBrowserBailout ? noop : onBrowserBailout;
 		this.onAllReady = void 0 === onAllReady ? noop : onAllReady;
 		this.onShellReady = void 0 === onShellReady ? noop : onShellReady;
 		this.onShellError = void 0 === onShellError ? noop : onShellError;
 		this.onFatalError = void 0 === onFatalError ? noop : onFatalError;
+		this.renderLifetimeController = null;
 		this.formState = void 0 === formState ? null : formState;
 	}
-	function createRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, formState) {
-		resumableState = new RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, formState);
+	function createRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, formState) {
+		resumableState = new RequestInstance(resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, formState);
 		renderState = createPendingSegment(resumableState, 0, null, rootFormatContext, !1, !1);
 		renderState.parentFlushed = !0;
 		children = createRenderTask(resumableState, null, children, -1, null, renderState, null, null, resumableState.abortableTasks, null, rootFormatContext, null, emptyTreeContext, null, null);
@@ -11847,8 +12138,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		resumableState.pingedTasks.push(children);
 		return resumableState;
 	}
-	function createPrerenderRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone) {
-		children = createRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, void 0);
+	function createPrerenderRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError) {
+		children = createRequest(children, resumableState, renderState, rootFormatContext, progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, void 0);
 		children.trackedPostpones = {
 			workingMap: /* @__PURE__ */ new Map(),
 			rootNodes: [],
@@ -11856,8 +12147,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		};
 		return children;
 	}
-	function resumeRequest(children, postponedState, renderState, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone) {
-		renderState = new RequestInstance(postponedState.resumableState, renderState, postponedState.rootFormatContext, postponedState.progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone, null);
+	function resumeRequest(children, postponedState, renderState, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError) {
+		renderState = new RequestInstance(postponedState.resumableState, renderState, postponedState.rootFormatContext, postponedState.progressiveChunkSize, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError, null);
 		renderState.nextSegmentId = postponedState.nextSegmentId;
 		if ("number" === typeof postponedState.replaySlots) return onError = createPendingSegment(renderState, 0, null, postponedState.rootFormatContext, !1, !1), onError.parentFlushed = !0, children = createRenderTask(renderState, null, children, -1, null, onError, null, null, renderState.abortableTasks, null, postponedState.rootFormatContext, null, emptyTreeContext, null, null), pushComponentStack(children), renderState.pingedTasks.push(children), renderState;
 		children = createReplayTask(renderState, null, {
@@ -11869,8 +12160,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		renderState.pingedTasks.push(children);
 		return renderState;
 	}
-	function resumeAndPrerenderRequest(children, postponedState, renderState, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone) {
-		children = resumeRequest(children, postponedState, renderState, onError, onAllReady, onShellReady, onShellError, onFatalError, onPostpone);
+	function resumeAndPrerenderRequest(children, postponedState, renderState, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError) {
+		children = resumeRequest(children, postponedState, renderState, onError, onBrowserBailout, onAllReady, onShellReady, onShellError, onFatalError);
 		children.trackedPostpones = {
 			workingMap: /* @__PURE__ */ new Map(),
 			rootNodes: [],
@@ -11892,7 +12183,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			return performWork(request);
 		}));
 	}
-	function createSuspenseBoundary(request, row, fallbackAbortableTasks, contentPreamble, fallbackPreamble) {
+	function createSuspenseBoundary(request, row, fallbackAbortableTasks, preamble, defer) {
 		fallbackAbortableTasks = {
 			status: 0,
 			rootSegmentID: -1,
@@ -11901,16 +12192,15 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			row,
 			completedSegments: [],
 			byteSize: 0,
+			defer,
 			fallbackAbortableTasks,
 			errorDigest: null,
 			contentState: createHoistableState(),
 			fallbackState: createHoistableState(),
-			contentPreamble,
-			fallbackPreamble,
-			trackedContentKeyPath: null,
-			trackedFallbackNode: null
+			preamble,
+			tracked: null
 		};
-		null !== row && (row.pendingTasks++, contentPreamble = row.boundaries, null !== contentPreamble && (request.allPendingTasks++, fallbackAbortableTasks.pendingTasks++, contentPreamble.push(fallbackAbortableTasks)), request = row.inheritedHoistables, null !== request && hoistHoistables(fallbackAbortableTasks.contentState, request));
+		null !== row && (row.pendingTasks++, preamble = row.boundaries, null !== preamble && (request.allPendingTasks++, fallbackAbortableTasks.pendingTasks++, preamble.push(fallbackAbortableTasks)), request = row.inheritedHoistables, null !== request && hoistHoistables(fallbackAbortableTasks.contentState, request));
 		return fallbackAbortableTasks;
 	}
 	function createRenderTask(request, thenableState, node, childIndex, blockedBoundary, blockedSegment, blockedPreamble, hoistableState, abortSet, keyPath, formatContext, context, treeContext, row, componentStack) {
@@ -11921,8 +12211,13 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			replay: null,
 			node,
 			childIndex,
-			ping: function() {
-				return pingTask(request, task);
+			ping: {
+				resolve: function() {
+					return pingTask(request, task);
+				},
+				reject: function(error) {
+					request.aborted ? task.abortSet.delete(task) && finishAbortedTask(task, request, error) : pingTask(request, task);
+				}
 			},
 			blockedBoundary,
 			blockedSegment,
@@ -11949,8 +12244,13 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			replay,
 			node,
 			childIndex,
-			ping: function() {
-				return pingTask(request, task);
+			ping: {
+				resolve: function() {
+					return pingTask(request, task);
+				},
+				reject: function(error) {
+					request.aborted ? task.abortSet.delete(task) && finishAbortedTask(task, request, error) : pingTask(request, task);
+				}
 			},
 			blockedBoundary,
 			blockedSegment: null,
@@ -12020,15 +12320,17 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		return errorInfo;
 	}
 	function logRecoverableError(request, error, errorInfo) {
+		if (isRecoverableError(error)) return request = request.onBrowserBailout, request(error, errorInfo), "";
 		request = request.onError;
 		error = request(error, errorInfo);
-		if (null == error || "string" === typeof error) return error;
+		if (null == error || "string" === typeof error) return "" === error ? void 0 : error;
 	}
 	function fatalError(request, error) {
 		var onShellError = request.onShellError, onFatalError = request.onFatalError;
-		onShellError(error);
+		0 !== request.pendingRootTasks && onShellError(error);
 		onFatalError(error);
-		null !== request.destination ? (request.status = 14, request.destination.destroy(error)) : (request.status = 13, request.fatalError = error);
+		endRenderLifetime(request);
+		null !== request.destination ? (request.status = 13, request.destination.destroy(error)) : (request.status = 12, request.aborted || (request.fatalError = error));
 	}
 	function finishSuspenseListRow(request, row) {
 		unblockSuspenseListRow(request, row.next, row.hoistables);
@@ -12094,24 +12396,25 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			else for (resumeSlots = 0; resumeSlots < keyPath; resumeSlots++) n = "backwards" !== revealOrder && "unstable_legacy-backwards" !== revealOrder ? resumeSlots : keyPath - 1 - resumeSlots, i = rows[n], task.row = previousSuspenseListRow = createSuspenseListRow(previousSuspenseListRow), task.treeContext = pushTreeContext(prevTreeContext, keyPath, n), renderNode(request, task, i, n), 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
 		} else if ("backwards" !== revealOrder && "unstable_legacy-backwards" !== revealOrder) for (revealOrder = 0; revealOrder < keyPath; revealOrder++) resumeSlots = rows[revealOrder], task.row = previousSuspenseListRow = createSuspenseListRow(previousSuspenseListRow), task.treeContext = pushTreeContext(prevTreeContext, keyPath, revealOrder), renderNode(request, task, resumeSlots, revealOrder), 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
 		else {
-			revealOrder = task.blockedSegment;
-			resumeSlots = revealOrder.children.length;
-			n = revealOrder.chunks.length;
-			for (i = keyPath - 1; 0 <= i; i--) {
-				node = rows[i];
+			resumeSlots = task.blockedSegment;
+			n = resumeSlots.children.length;
+			i = resumeSlots.chunks.length;
+			for (node = 0; node < keyPath; node++) {
+				resumeSegmentID = "unstable_legacy-backwards" === revealOrder ? keyPath - 1 - node : node;
+				var node$40 = rows[resumeSegmentID];
 				task.row = previousSuspenseListRow = createSuspenseListRow(previousSuspenseListRow);
-				task.treeContext = pushTreeContext(prevTreeContext, keyPath, i);
-				resumeSegmentID = createPendingSegment(request, n, null, task.formatContext, 0 === i ? revealOrder.lastPushedText : !0, !0);
-				revealOrder.children.splice(resumeSlots, 0, resumeSegmentID);
-				task.blockedSegment = resumeSegmentID;
+				task.treeContext = pushTreeContext(prevTreeContext, keyPath, resumeSegmentID);
+				var newSegment = createPendingSegment(request, i, null, task.formatContext, 0 === resumeSegmentID ? resumeSlots.lastPushedText : !0, !0);
+				resumeSlots.children.splice(n, 0, newSegment);
+				task.blockedSegment = newSegment;
 				try {
-					renderNode(request, task, node, i), resumeSegmentID.lastPushedText && resumeSegmentID.textEmbedded && resumeSegmentID.chunks.push(textSeparator), resumeSegmentID.status = 1, finishedSegment(request, task.blockedBoundary, resumeSegmentID), 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
+					renderNode(request, task, node$40, resumeSegmentID), newSegment.lastPushedText && newSegment.textEmbedded && newSegment.chunks.push(textSeparator), newSegment.status = 1, finishedSegment(request, task.blockedBoundary, newSegment), 0 === --previousSuspenseListRow.pendingTasks && finishSuspenseListRow(request, previousSuspenseListRow);
 				} catch (thrownValue) {
-					throw resumeSegmentID.status = 12 === request.status ? 3 : 4, thrownValue;
+					throw newSegment.status = request.aborted ? 3 : 4, thrownValue;
 				}
 			}
-			task.blockedSegment = revealOrder;
-			revealOrder.lastPushedText = !1;
+			task.blockedSegment = resumeSlots;
+			resumeSlots.lastPushedText = !1;
 		}
 		null !== prevRow && null !== previousSuspenseListRow && 0 < previousSuspenseListRow.pendingTasks && (prevRow.pendingTasks++, previousSuspenseListRow.next = prevRow);
 		task.treeContext = prevTreeContext;
@@ -12158,287 +12461,374 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			var defaultProps = type.defaultProps;
 			if (defaultProps) {
 				newProps === props && (newProps = assign({}, newProps, props));
-				for (var propName$44 in defaultProps) void 0 === newProps[propName$44] && (newProps[propName$44] = defaultProps[propName$44]);
+				for (var propName$45 in defaultProps) void 0 === newProps[propName$45] && (newProps[propName$45] = defaultProps[propName$45]);
 			}
-			props = newProps;
-			newProps = emptyContextObject;
-			defaultProps = type.contextType;
-			"object" === typeof defaultProps && null !== defaultProps && (newProps = defaultProps._currentValue);
-			newProps = new type(props, newProps);
-			var initialState = void 0 !== newProps.state ? newProps.state : null;
-			newProps.updater = classComponentUpdater;
-			newProps.props = props;
-			newProps.state = initialState;
-			defaultProps = {
+			var JSCompiler_inline_result = newProps;
+			var context = emptyContextObject, contextType = type.contextType;
+			"object" === typeof contextType && null !== contextType && (context = contextType._currentValue);
+			var JSCompiler_inline_result$jscomp$0 = new type(JSCompiler_inline_result, context);
+			var initialState = void 0 !== JSCompiler_inline_result$jscomp$0.state ? JSCompiler_inline_result$jscomp$0.state : null;
+			JSCompiler_inline_result$jscomp$0.updater = classComponentUpdater;
+			JSCompiler_inline_result$jscomp$0.props = JSCompiler_inline_result;
+			JSCompiler_inline_result$jscomp$0.state = initialState;
+			var internalInstance = {
 				queue: [],
 				replace: !1
 			};
-			newProps._reactInternals = defaultProps;
-			ref = type.contextType;
-			newProps.context = "object" === typeof ref && null !== ref ? ref._currentValue : emptyContextObject;
-			ref = type.getDerivedStateFromProps;
-			"function" === typeof ref && (ref = ref(props, initialState), initialState = null === ref || void 0 === ref ? initialState : assign({}, initialState, ref), newProps.state = initialState);
-			if ("function" !== typeof type.getDerivedStateFromProps && "function" !== typeof newProps.getSnapshotBeforeUpdate && ("function" === typeof newProps.UNSAFE_componentWillMount || "function" === typeof newProps.componentWillMount)) if (type = newProps.state, "function" === typeof newProps.componentWillMount && newProps.componentWillMount(), "function" === typeof newProps.UNSAFE_componentWillMount && newProps.UNSAFE_componentWillMount(), type !== newProps.state && classComponentUpdater.enqueueReplaceState(newProps, newProps.state, null), null !== defaultProps.queue && 0 < defaultProps.queue.length) if (type = defaultProps.queue, ref = defaultProps.replace, defaultProps.queue = null, defaultProps.replace = !1, ref && 1 === type.length) newProps.state = type[0];
-			else {
-				defaultProps = ref ? type[0] : newProps.state;
-				initialState = !0;
-				for (ref = ref ? 1 : 0; ref < type.length; ref++) propName$44 = type[ref], propName$44 = "function" === typeof propName$44 ? propName$44.call(newProps, defaultProps, props, void 0) : propName$44, null != propName$44 && (initialState ? (initialState = !1, defaultProps = assign({}, defaultProps, propName$44)) : assign(defaultProps, propName$44));
-				newProps.state = defaultProps;
+			JSCompiler_inline_result$jscomp$0._reactInternals = internalInstance;
+			var contextType$jscomp$0 = type.contextType;
+			JSCompiler_inline_result$jscomp$0.context = "object" === typeof contextType$jscomp$0 && null !== contextType$jscomp$0 ? contextType$jscomp$0._currentValue : emptyContextObject;
+			var getDerivedStateFromProps = type.getDerivedStateFromProps;
+			if ("function" === typeof getDerivedStateFromProps) {
+				var partialState = getDerivedStateFromProps(JSCompiler_inline_result, initialState);
+				JSCompiler_inline_result$jscomp$0.state = null === partialState || void 0 === partialState ? initialState : assign({}, initialState, partialState);
 			}
-			else defaultProps.queue = null;
-			type = newProps.render();
-			if (12 === request.status) throw null;
-			props = task.keyPath;
+			if ("function" !== typeof type.getDerivedStateFromProps && "function" !== typeof JSCompiler_inline_result$jscomp$0.getSnapshotBeforeUpdate && ("function" === typeof JSCompiler_inline_result$jscomp$0.UNSAFE_componentWillMount || "function" === typeof JSCompiler_inline_result$jscomp$0.componentWillMount)) {
+				var oldState = JSCompiler_inline_result$jscomp$0.state;
+				"function" === typeof JSCompiler_inline_result$jscomp$0.componentWillMount && JSCompiler_inline_result$jscomp$0.componentWillMount();
+				"function" === typeof JSCompiler_inline_result$jscomp$0.UNSAFE_componentWillMount && JSCompiler_inline_result$jscomp$0.UNSAFE_componentWillMount();
+				oldState !== JSCompiler_inline_result$jscomp$0.state && classComponentUpdater.enqueueReplaceState(JSCompiler_inline_result$jscomp$0, JSCompiler_inline_result$jscomp$0.state, null);
+				if (null !== internalInstance.queue && 0 < internalInstance.queue.length) {
+					var oldQueue = internalInstance.queue, oldReplace = internalInstance.replace;
+					internalInstance.queue = null;
+					internalInstance.replace = !1;
+					if (oldReplace && 1 === oldQueue.length) JSCompiler_inline_result$jscomp$0.state = oldQueue[0];
+					else {
+						for (var nextState = oldReplace ? oldQueue[0] : JSCompiler_inline_result$jscomp$0.state, dontMutate = !0, i = oldReplace ? 1 : 0; i < oldQueue.length; i++) {
+							var partial = oldQueue[i], partialState$jscomp$0 = "function" === typeof partial ? partial.call(JSCompiler_inline_result$jscomp$0, nextState, JSCompiler_inline_result, void 0) : partial;
+							null != partialState$jscomp$0 && (dontMutate ? (dontMutate = !1, nextState = assign({}, nextState, partialState$jscomp$0)) : assign(nextState, partialState$jscomp$0));
+						}
+						JSCompiler_inline_result$jscomp$0.state = nextState;
+					}
+				} else internalInstance.queue = null;
+			}
+			var nextChildren = JSCompiler_inline_result$jscomp$0.render();
+			if (request.aborted) throw null;
+			var prevKeyPath = task.keyPath;
 			task.keyPath = keyPath;
-			renderNodeDestructive(request, task, type, -1);
-			task.keyPath = props;
+			renderNodeDestructive(request, task, nextChildren, -1);
+			task.keyPath = prevKeyPath;
 		} else {
-			type = renderWithHooks(request, task, keyPath, type, props, void 0);
-			if (12 === request.status) throw null;
-			finishFunctionComponent(request, task, keyPath, type, 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
+			var value = renderWithHooks(request, task, keyPath, type, props, void 0);
+			if (request.aborted) throw null;
+			finishFunctionComponent(request, task, keyPath, value, 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
 		}
-		else if ("string" === typeof type) if (newProps = task.blockedSegment, null === newProps) newProps = props.children, defaultProps = task.formatContext, initialState = task.keyPath, task.formatContext = getChildFormatContext(defaultProps, type, props), task.keyPath = keyPath, renderNode(request, task, newProps, -1), task.formatContext = defaultProps, task.keyPath = initialState;
-		else {
-			initialState = pushStartInstance(newProps.chunks, type, props, request.resumableState, request.renderState, task.blockedPreamble, task.hoistableState, task.formatContext, newProps.lastPushedText);
-			newProps.lastPushedText = !1;
-			defaultProps = task.formatContext;
-			ref = task.keyPath;
-			task.keyPath = keyPath;
-			if (3 === (task.formatContext = getChildFormatContext(defaultProps, type, props)).insertionMode) {
-				keyPath = createPendingSegment(request, 0, null, task.formatContext, !1, !1);
-				newProps.preambleChildren.push(keyPath);
-				task.blockedSegment = keyPath;
-				try {
-					keyPath.status = 6, renderNode(request, task, initialState, -1), keyPath.lastPushedText && keyPath.textEmbedded && keyPath.chunks.push(textSeparator), keyPath.status = 1, finishedSegment(request, task.blockedBoundary, keyPath);
-				} finally {
-					task.blockedSegment = newProps;
+		else if ("string" === typeof type) {
+			var segment = task.blockedSegment;
+			if (null === segment) {
+				var children = props.children, prevContext = task.formatContext, prevKeyPath$jscomp$0 = task.keyPath;
+				task.formatContext = getChildFormatContext(prevContext, type, props);
+				task.keyPath = keyPath;
+				renderNode(request, task, children, -1);
+				task.formatContext = prevContext;
+				task.keyPath = prevKeyPath$jscomp$0;
+			} else {
+				var children$42 = pushStartInstance(segment.chunks, type, props, request.resumableState, request.renderState, task.blockedPreamble, task.hoistableState, task.formatContext, segment.lastPushedText);
+				segment.lastPushedText = !1;
+				var prevContext$43 = task.formatContext, prevKeyPath$44 = task.keyPath;
+				task.keyPath = keyPath;
+				if (3 === (task.formatContext = getChildFormatContext(prevContext$43, type, props)).insertionMode) {
+					var preambleSegment = createPendingSegment(request, 0, null, task.formatContext, !1, !1);
+					segment.preambleChildren.push(preambleSegment);
+					task.blockedSegment = preambleSegment;
+					try {
+						renderNode(request, task, children$42, -1), preambleSegment.lastPushedText && preambleSegment.textEmbedded && preambleSegment.chunks.push(textSeparator), preambleSegment.status = 1, finishedSegment(request, task.blockedBoundary, preambleSegment);
+					} finally {
+						task.blockedSegment = segment;
+					}
+				} else renderNode(request, task, children$42, -1);
+				task.formatContext = prevContext$43;
+				task.keyPath = prevKeyPath$44;
+				a: {
+					var target = segment.chunks, resumableState = request.resumableState;
+					switch (type) {
+						case "title":
+						case "style":
+						case "script":
+						case "area":
+						case "base":
+						case "br":
+						case "col":
+						case "embed":
+						case "hr":
+						case "img":
+						case "input":
+						case "keygen":
+						case "link":
+						case "meta":
+						case "param":
+						case "source":
+						case "track":
+						case "wbr": break a;
+						case "body":
+							if (1 >= prevContext$43.insertionMode) {
+								resumableState.hasBody = !0;
+								break a;
+							}
+							break;
+						case "html":
+							if (0 === prevContext$43.insertionMode) {
+								resumableState.hasHtml = !0;
+								break a;
+							}
+							break;
+						case "head": if (1 >= prevContext$43.insertionMode) break a;
+					}
+					target.push(endChunkForTag(type));
 				}
-			} else renderNode(request, task, initialState, -1);
-			task.formatContext = defaultProps;
-			task.keyPath = ref;
-			a: {
-				task = newProps.chunks;
-				request = request.resumableState;
-				switch (type) {
-					case "title":
-					case "style":
-					case "script":
-					case "area":
-					case "base":
-					case "br":
-					case "col":
-					case "embed":
-					case "hr":
-					case "img":
-					case "input":
-					case "keygen":
-					case "link":
-					case "meta":
-					case "param":
-					case "source":
-					case "track":
-					case "wbr": break a;
-					case "body":
-						if (1 >= defaultProps.insertionMode) {
-							request.hasBody = !0;
-							break a;
-						}
-						break;
-					case "html":
-						if (0 === defaultProps.insertionMode) {
-							request.hasHtml = !0;
-							break a;
-						}
-						break;
-					case "head": if (1 >= defaultProps.insertionMode) break a;
-				}
-				task.push(endChunkForTag(type));
+				segment.lastPushedText = !1;
 			}
-			newProps.lastPushedText = !1;
-		}
-		else {
+		} else {
 			switch (type) {
 				case REACT_LEGACY_HIDDEN_TYPE:
 				case REACT_STRICT_MODE_TYPE:
 				case REACT_PROFILER_TYPE:
 				case REACT_FRAGMENT_TYPE:
-					type = task.keyPath;
+					var prevKeyPath$jscomp$1 = task.keyPath;
 					task.keyPath = keyPath;
 					renderNodeDestructive(request, task, props.children, -1);
-					task.keyPath = type;
+					task.keyPath = prevKeyPath$jscomp$1;
 					return;
 				case REACT_ACTIVITY_TYPE:
-					type = task.blockedSegment;
-					null === type ? "hidden" !== props.mode && (type = task.keyPath, task.keyPath = keyPath, renderNode(request, task, props.children, -1), task.keyPath = type) : "hidden" !== props.mode && (type.chunks.push(startActivityBoundary), type.lastPushedText = !1, newProps = task.keyPath, task.keyPath = keyPath, renderNode(request, task, props.children, -1), task.keyPath = newProps, type.chunks.push(endActivityBoundary), type.lastPushedText = !1);
+					var segment$jscomp$0 = task.blockedSegment;
+					if (null === segment$jscomp$0) {
+						if ("hidden" !== props.mode) {
+							var prevKeyPath$jscomp$2 = task.keyPath;
+							task.keyPath = keyPath;
+							renderNode(request, task, props.children, -1);
+							task.keyPath = prevKeyPath$jscomp$2;
+						}
+					} else if ("hidden" !== props.mode) {
+						segment$jscomp$0.chunks.push(startActivityBoundary);
+						segment$jscomp$0.lastPushedText = !1;
+						var prevKeyPath$47 = task.keyPath;
+						task.keyPath = keyPath;
+						renderNode(request, task, props.children, -1);
+						task.keyPath = prevKeyPath$47;
+						segment$jscomp$0.chunks.push(endActivityBoundary);
+						segment$jscomp$0.lastPushedText = !1;
+					}
 					return;
 				case REACT_SUSPENSE_LIST_TYPE:
 					a: {
-						type = props.children;
-						props = props.revealOrder;
-						if ("forwards" === props || "backwards" === props || "unstable_legacy-backwards" === props) {
-							if (isArrayImpl(type)) {
-								renderSuspenseListRows(request, task, keyPath, type, props);
+						var children$jscomp$0 = props.children, revealOrder = props.revealOrder;
+						if ("independent" !== revealOrder && "together" !== revealOrder) {
+							if (isArrayImpl(children$jscomp$0)) {
+								renderSuspenseListRows(request, task, keyPath, children$jscomp$0, revealOrder);
 								break a;
 							}
-							if (newProps = getIteratorFn(type)) {
-								if (newProps = newProps.call(type)) {
-									defaultProps = newProps.next();
-									if (!defaultProps.done) {
+							var iteratorFn = getIteratorFn(children$jscomp$0);
+							if (iteratorFn) {
+								var iterator = iteratorFn.call(children$jscomp$0);
+								if (iterator) {
+									var step = iterator.next();
+									if (!step.done) {
 										do
-											defaultProps = newProps.next();
-										while (!defaultProps.done);
-										renderSuspenseListRows(request, task, keyPath, type, props);
+											step = iterator.next();
+										while (!step.done);
+										renderSuspenseListRows(request, task, keyPath, children$jscomp$0, revealOrder);
 									}
 									break a;
 								}
 							}
 						}
-						"together" === props ? (props = task.keyPath, newProps = task.row, defaultProps = task.row = createSuspenseListRow(null), defaultProps.boundaries = [], defaultProps.together = !0, task.keyPath = keyPath, renderNodeDestructive(request, task, type, -1), 0 === --defaultProps.pendingTasks && finishSuspenseListRow(request, defaultProps), task.keyPath = props, task.row = newProps, null !== newProps && 0 < defaultProps.pendingTasks && (newProps.pendingTasks++, defaultProps.next = newProps)) : (props = task.keyPath, task.keyPath = keyPath, renderNodeDestructive(request, task, type, -1), task.keyPath = props);
+						if ("together" === revealOrder) {
+							var prevKeyPath$41 = task.keyPath, prevRow = task.row, newRow = task.row = createSuspenseListRow(null);
+							newRow.boundaries = [];
+							newRow.together = !0;
+							task.keyPath = keyPath;
+							renderNodeDestructive(request, task, children$jscomp$0, -1);
+							0 === --newRow.pendingTasks && finishSuspenseListRow(request, newRow);
+							task.keyPath = prevKeyPath$41;
+							task.row = prevRow;
+							null !== prevRow && 0 < newRow.pendingTasks && (prevRow.pendingTasks++, newRow.next = prevRow);
+						} else {
+							var prevKeyPath$jscomp$3 = task.keyPath;
+							task.keyPath = keyPath;
+							renderNodeDestructive(request, task, children$jscomp$0, -1);
+							task.keyPath = prevKeyPath$jscomp$3;
+						}
 					}
 					return;
 				case REACT_VIEW_TRANSITION_TYPE:
+					var prevContext$jscomp$0 = task.formatContext, prevKeyPath$jscomp$4 = task.keyPath;
+					var resumableState$jscomp$0 = request.resumableState;
+					if (null != props.name && "auto" !== props.name) var JSCompiler_inline_result$jscomp$2 = props.name;
+					else JSCompiler_inline_result$jscomp$2 = makeId(resumableState$jscomp$0, getTreeId(task.treeContext), 0);
+					var autoName = JSCompiler_inline_result$jscomp$2, resumableState$jscomp$1 = request.resumableState, update = getViewTransitionClassName(props.default, props.update), enter = getViewTransitionClassName(props.default, props.enter), exit = getViewTransitionClassName(props.default, props.exit), share = getViewTransitionClassName(props.default, props.share), name = props.name;
+					update ??= "auto";
+					enter ??= "auto";
+					exit ??= "auto";
+					if (null == name) {
+						var parentViewTransition = prevContext$jscomp$0.viewTransition;
+						null !== parentViewTransition ? (name = parentViewTransition.name, share = parentViewTransition.share) : (name = "auto", share = "none");
+					} else share ??= "auto", prevContext$jscomp$0.tagScope & 4 && (resumableState$jscomp$1.instructions |= 128);
+					prevContext$jscomp$0.tagScope & 8 ? resumableState$jscomp$1.instructions |= 128 : exit = "none";
+					prevContext$jscomp$0.tagScope & 16 ? resumableState$jscomp$1.instructions |= 128 : enter = "none";
+					var viewTransition = {
+						update,
+						enter,
+						exit,
+						share,
+						parentEnter: "none",
+						parentExit: "none",
+						name,
+						autoName,
+						nameIdx: 0
+					}, subtreeScope = prevContext$jscomp$0.tagScope & -25;
+					subtreeScope = "none" !== update ? subtreeScope | 32 : subtreeScope & -33;
+					"none" !== enter && (subtreeScope |= 64);
+					task.formatContext = createFormatContext(prevContext$jscomp$0.insertionMode, prevContext$jscomp$0.selectedValue, subtreeScope, viewTransition);
+					task.keyPath = keyPath;
+					if (null != props.name && "auto" !== props.name) renderNodeDestructive(request, task, props.children, -1);
+					else {
+						var prevTreeContext = task.treeContext;
+						task.treeContext = pushTreeContext(prevTreeContext, 1, 0);
+						renderNode(request, task, props.children, -1);
+						task.treeContext = prevTreeContext;
+					}
+					task.formatContext = prevContext$jscomp$0;
+					task.keyPath = prevKeyPath$jscomp$4;
+					return;
 				case REACT_SCOPE_TYPE: throw Error("ReactDOMServer does not yet support scope components.");
 				case REACT_SUSPENSE_TYPE:
 					a: if (null !== task.replay) {
-						type = task.keyPath;
-						newProps = task.formatContext;
-						defaultProps = task.row;
+						var prevKeyPath$27 = task.keyPath, prevContext$28 = task.formatContext, prevRow$29 = task.row;
 						task.keyPath = keyPath;
-						task.formatContext = getSuspenseContentFormatContext(request.resumableState, newProps);
+						task.formatContext = getSuspenseContentFormatContext(request.resumableState, prevContext$28);
 						task.row = null;
-						keyPath = props.children;
+						var content$30 = props.children;
 						try {
-							renderNode(request, task, keyPath, -1);
+							renderNode(request, task, content$30, -1);
 						} finally {
-							task.keyPath = type, task.formatContext = newProps, task.row = defaultProps;
+							task.keyPath = prevKeyPath$27, task.formatContext = prevContext$28, task.row = prevRow$29;
 						}
 					} else {
-						type = task.keyPath;
-						ref = task.formatContext;
-						var prevRow = task.row;
-						propName$44 = task.blockedBoundary;
-						propName = task.blockedPreamble;
-						var parentHoistableState = task.hoistableState, parentSegment = task.blockedSegment, fallback = props.fallback;
-						props = props.children;
-						var fallbackAbortSet = /* @__PURE__ */ new Set();
-						var newBoundary = 2 > task.formatContext.insertionMode ? createSuspenseBoundary(request, task.row, fallbackAbortSet, createPreambleState(), createPreambleState()) : createSuspenseBoundary(request, task.row, fallbackAbortSet, null, null);
-						null !== request.trackedPostpones && (newBoundary.trackedContentKeyPath = keyPath);
-						var boundarySegment = createPendingSegment(request, parentSegment.chunks.length, newBoundary, task.formatContext, !1, !1);
+						var prevKeyPath$jscomp$5 = task.keyPath, prevContext$jscomp$1 = task.formatContext, prevRow$jscomp$0 = task.row, parentBoundary = task.blockedBoundary, parentPreamble = task.blockedPreamble, parentHoistableState = task.hoistableState, parentSegment = task.blockedSegment, fallback = props.fallback, content = props.children, fallbackAbortSet = /* @__PURE__ */ new Set(), newBoundary = createSuspenseBoundary(request, task.row, fallbackAbortSet, 2 > task.formatContext.insertionMode ? {
+							content: createPreambleState(),
+							fallback: createPreambleState()
+						} : null, !1), boundarySegment = createPendingSegment(request, parentSegment.chunks.length, newBoundary, task.formatContext, !1, !1);
 						parentSegment.children.push(boundarySegment);
 						parentSegment.lastPushedText = !1;
 						var contentRootSegment = createPendingSegment(request, 0, null, task.formatContext, !1, !1);
 						contentRootSegment.parentFlushed = !0;
-						if (null !== request.trackedPostpones) {
-							newProps = task.componentStack;
-							defaultProps = [
+						var trackedPostpones = request.trackedPostpones;
+						if (null !== trackedPostpones) {
+							var suspenseComponentStack = task.componentStack, fallbackKeyPath = [
 								keyPath[0],
 								"Suspense Fallback",
 								keyPath[2]
 							];
-							initialState = [
-								defaultProps[1],
-								defaultProps[2],
-								[],
-								null
-							];
-							request.trackedPostpones.workingMap.set(defaultProps, initialState);
-							newBoundary.trackedFallbackNode = initialState;
-							task.blockedSegment = boundarySegment;
-							task.blockedPreamble = newBoundary.fallbackPreamble;
-							task.keyPath = defaultProps;
-							task.formatContext = getSuspenseFallbackFormatContext(request.resumableState, ref);
-							task.componentStack = replaceSuspenseComponentStackWithSuspenseFallbackStack(newProps);
-							boundarySegment.status = 6;
-							try {
-								renderNode(request, task, fallback, -1), boundarySegment.lastPushedText && boundarySegment.textEmbedded && boundarySegment.chunks.push(textSeparator), boundarySegment.status = 1, finishedSegment(request, propName$44, boundarySegment);
-							} catch (thrownValue) {
-								throw boundarySegment.status = 12 === request.status ? 3 : 4, thrownValue;
-							} finally {
-								task.blockedSegment = parentSegment, task.blockedPreamble = propName, task.keyPath = type, task.formatContext = ref;
+							if (null !== trackedPostpones) {
+								var fallbackReplayNode = [
+									fallbackKeyPath[1],
+									fallbackKeyPath[2],
+									[],
+									null
+								];
+								trackedPostpones.workingMap.set(fallbackKeyPath, fallbackReplayNode);
+								newBoundary.tracked = {
+									contentKeyPath: keyPath,
+									fallbackNode: fallbackReplayNode
+								};
 							}
-							task = createRenderTask(request, null, props, -1, newBoundary, contentRootSegment, newBoundary.contentPreamble, newBoundary.contentState, task.abortSet, keyPath, getSuspenseContentFormatContext(request.resumableState, task.formatContext), task.context, task.treeContext, null, newProps);
-							pushComponentStack(task);
-							request.pingedTasks.push(task);
+							task.blockedSegment = boundarySegment;
+							task.blockedPreamble = null === newBoundary.preamble ? null : newBoundary.preamble.fallback;
+							task.keyPath = fallbackKeyPath;
+							task.formatContext = getSuspenseFallbackFormatContext(request.resumableState, prevContext$jscomp$1);
+							task.componentStack = replaceSuspenseComponentStackWithSuspenseFallbackStack(suspenseComponentStack);
+							try {
+								renderNode(request, task, fallback, -1), boundarySegment.lastPushedText && boundarySegment.textEmbedded && boundarySegment.chunks.push(textSeparator), boundarySegment.status = 1, finishedSegment(request, parentBoundary, boundarySegment);
+							} catch (thrownValue) {
+								throw boundarySegment.status = request.aborted ? 3 : 4, thrownValue;
+							} finally {
+								task.blockedSegment = parentSegment, task.blockedPreamble = parentPreamble, task.keyPath = prevKeyPath$jscomp$5, task.formatContext = prevContext$jscomp$1;
+							}
+							var suspendedPrimaryTask = createRenderTask(request, null, content, -1, newBoundary, contentRootSegment, null === newBoundary.preamble ? null : newBoundary.preamble.content, newBoundary.contentState, task.abortSet, keyPath, getSuspenseContentFormatContext(request.resumableState, task.formatContext), task.context, task.treeContext, null, suspenseComponentStack);
+							pushComponentStack(suspendedPrimaryTask);
+							request.pingedTasks.push(suspendedPrimaryTask);
 						} else {
 							task.blockedBoundary = newBoundary;
-							task.blockedPreamble = newBoundary.contentPreamble;
+							task.blockedPreamble = null === newBoundary.preamble ? null : newBoundary.preamble.content;
 							task.hoistableState = newBoundary.contentState;
 							task.blockedSegment = contentRootSegment;
 							task.keyPath = keyPath;
-							task.formatContext = getSuspenseContentFormatContext(request.resumableState, ref);
+							task.formatContext = getSuspenseContentFormatContext(request.resumableState, prevContext$jscomp$1);
 							task.row = null;
-							contentRootSegment.status = 6;
 							try {
-								if (renderNode(request, task, props, -1), contentRootSegment.lastPushedText && contentRootSegment.textEmbedded && contentRootSegment.chunks.push(textSeparator), contentRootSegment.status = 1, finishedSegment(request, newBoundary, contentRootSegment), queueCompletedSegment(newBoundary, contentRootSegment), 0 === newBoundary.pendingTasks && 0 === newBoundary.status) {
+								if (renderNode(request, task, content, -1), contentRootSegment.lastPushedText && contentRootSegment.textEmbedded && contentRootSegment.chunks.push(textSeparator), contentRootSegment.status = 1, finishedSegment(request, newBoundary, contentRootSegment), queueCompletedSegment(newBoundary, contentRootSegment), 0 === newBoundary.pendingTasks && 0 === newBoundary.status) {
 									if (newBoundary.status = 1, !isEligibleForOutlining(request, newBoundary)) {
-										null !== prevRow && 0 === --prevRow.pendingTasks && finishSuspenseListRow(request, prevRow);
+										null !== prevRow$jscomp$0 && 0 === --prevRow$jscomp$0.pendingTasks && finishSuspenseListRow(request, prevRow$jscomp$0);
 										0 === request.pendingRootTasks && task.blockedPreamble && preparePreamble(request);
 										break a;
 									}
-								} else null !== prevRow && prevRow.together && tryToResolveTogetherRow(request, prevRow);
+								} else null !== prevRow$jscomp$0 && prevRow$jscomp$0.together && tryToResolveTogetherRow(request, prevRow$jscomp$0);
 							} catch (thrownValue$31) {
-								newBoundary.status = 4, 12 === request.status ? (contentRootSegment.status = 3, newProps = request.fatalError) : (contentRootSegment.status = 4, newProps = thrownValue$31), defaultProps = getThrownInfo(task.componentStack), initialState = logRecoverableError(request, newProps, defaultProps), newBoundary.errorDigest = initialState, untrackBoundary(request, newBoundary);
+								newBoundary.status = 4;
+								if (request.aborted) {
+									contentRootSegment.status = 3;
+									var error = request.fatalError;
+								} else contentRootSegment.status = 4, error = thrownValue$31;
+								var thrownInfo = getThrownInfo(task.componentStack);
+								newBoundary.errorDigest = logRecoverableError(request, error, thrownInfo);
+								untrackBoundary(request, newBoundary);
 							} finally {
-								task.blockedBoundary = propName$44, task.blockedPreamble = propName, task.hoistableState = parentHoistableState, task.blockedSegment = parentSegment, task.keyPath = type, task.formatContext = ref, task.row = prevRow;
+								task.blockedBoundary = parentBoundary, task.blockedPreamble = parentPreamble, task.hoistableState = parentHoistableState, task.blockedSegment = parentSegment, task.keyPath = prevKeyPath$jscomp$5, task.formatContext = prevContext$jscomp$1, task.row = prevRow$jscomp$0;
 							}
-							task = createRenderTask(request, null, fallback, -1, propName$44, boundarySegment, newBoundary.fallbackPreamble, newBoundary.fallbackState, fallbackAbortSet, [
+							var suspendedFallbackTask = createRenderTask(request, null, fallback, -1, parentBoundary, boundarySegment, null === newBoundary.preamble ? null : newBoundary.preamble.fallback, newBoundary.fallbackState, fallbackAbortSet, [
 								keyPath[0],
 								"Suspense Fallback",
 								keyPath[2]
 							], getSuspenseFallbackFormatContext(request.resumableState, task.formatContext), task.context, task.treeContext, task.row, replaceSuspenseComponentStackWithSuspenseFallbackStack(task.componentStack));
-							pushComponentStack(task);
-							request.pingedTasks.push(task);
+							pushComponentStack(suspendedFallbackTask);
+							request.pingedTasks.push(suspendedFallbackTask);
 						}
 					}
 					return;
 			}
 			if ("object" === typeof type && null !== type) switch (type.$$typeof) {
 				case REACT_FORWARD_REF_TYPE:
-					if ("ref" in props) for (parentSegment in newProps = {}, props) "ref" !== parentSegment && (newProps[parentSegment] = props[parentSegment]);
-					else newProps = props;
-					type = renderWithHooks(request, task, keyPath, type.render, newProps, ref);
-					finishFunctionComponent(request, task, keyPath, type, 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
+					if ("ref" in props) {
+						var propsWithoutRef = {};
+						for (var key in props) "ref" !== key && (propsWithoutRef[key] = props[key]);
+					} else propsWithoutRef = props;
+					finishFunctionComponent(request, task, keyPath, renderWithHooks(request, task, keyPath, type.render, propsWithoutRef, ref), 0 !== localIdCounter, actionStateCounter, actionStateMatchingIndex);
 					return;
 				case REACT_MEMO_TYPE:
 					renderElement(request, task, keyPath, type.type, props, ref);
 					return;
 				case REACT_CONTEXT_TYPE:
-					defaultProps = props.children;
-					newProps = task.keyPath;
-					props = props.value;
-					initialState = type._currentValue;
-					type._currentValue = props;
-					ref = currentActiveSnapshot;
-					currentActiveSnapshot = type = {
-						parent: ref,
-						depth: null === ref ? 0 : ref.depth + 1,
+					var children$jscomp$2 = props.children, prevKeyPath$jscomp$6 = task.keyPath, nextValue = props.value;
+					var prevValue = type._currentValue;
+					type._currentValue = nextValue;
+					var prevNode = currentActiveSnapshot, newNode = {
+						parent: prevNode,
+						depth: null === prevNode ? 0 : prevNode.depth + 1,
 						context: type,
-						parentValue: initialState,
-						value: props
+						parentValue: prevValue,
+						value: nextValue
 					};
-					task.context = type;
+					currentActiveSnapshot = newNode;
+					task.context = newNode;
 					task.keyPath = keyPath;
-					renderNodeDestructive(request, task, defaultProps, -1);
-					request = currentActiveSnapshot;
-					if (null === request) throw Error("Tried to pop a Context at the root of the app. This is a bug in React.");
-					request.context._currentValue = request.parentValue;
-					request = currentActiveSnapshot = request.parent;
-					task.context = request;
-					task.keyPath = newProps;
+					renderNodeDestructive(request, task, children$jscomp$2, -1);
+					var prevSnapshot = currentActiveSnapshot;
+					if (null === prevSnapshot) throw Error("Tried to pop a Context at the root of the app. This is a bug in React.");
+					prevSnapshot.context._currentValue = prevSnapshot.parentValue;
+					task.context = currentActiveSnapshot = prevSnapshot.parent;
+					task.keyPath = prevKeyPath$jscomp$6;
 					return;
 				case REACT_CONSUMER_TYPE:
-					props = props.children;
-					type = props(type._context._currentValue);
-					props = task.keyPath;
+					var render = props.children, newChildren = render(type._context._currentValue), prevKeyPath$jscomp$7 = task.keyPath;
 					task.keyPath = keyPath;
-					renderNodeDestructive(request, task, type, -1);
-					task.keyPath = props;
+					renderNodeDestructive(request, task, newChildren, -1);
+					task.keyPath = prevKeyPath$jscomp$7;
 					return;
 				case REACT_LAZY_TYPE:
-					newProps = type._init;
-					type = newProps(type._payload);
-					if (12 === request.status) throw null;
-					renderElement(request, task, keyPath, type, props, ref);
+					var init = type._init;
+					var Component = init(type._payload);
+					if (request.aborted) throw null;
+					renderElement(request, task, keyPath, Component, props, ref);
 					return;
 			}
 			throw Error("Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: " + ((null == type ? type : typeof type) + "."));
@@ -12465,7 +12855,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					case REACT_ELEMENT_TYPE:
 						var type = node.type, key = node.key, props = node.props;
 						node = props.ref;
-						var ref = void 0 !== node ? node : null, name = getComponentNameFromType(type), keyOrIndex = null == key ? -1 === childIndex ? 0 : childIndex : key;
+						var ref = void 0 !== node ? node : null, name = getComponentNameFromType(type), keyOrIndex = null == key || key === REACT_OPTIMISTIC_KEY ? -1 === childIndex ? 0 : childIndex : key;
 						key = [
 							task.keyPath,
 							name,
@@ -12479,12 +12869,10 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 								if (keyOrIndex === node$jscomp$0[1]) {
 									if (4 === node$jscomp$0.length) {
 										if (null !== name && name !== node$jscomp$0[0]) throw Error("Expected the resume to render <" + node$jscomp$0[0] + "> in this slot but instead it rendered <" + name + ">. The tree doesn't match so React will fallback to client rendering.");
-										var childNodes = node$jscomp$0[2];
-										name = node$jscomp$0[3];
-										keyOrIndex = task.node;
+										var childNodes = node$jscomp$0[2], childSlots = node$jscomp$0[3], currentNode = task.node;
 										task.replay = {
 											nodes: childNodes,
-											slots: name,
+											slots: childSlots,
 											pendingTasks: 1
 										};
 										try {
@@ -12492,58 +12880,62 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 											if (1 === task.replay.pendingTasks && 0 < task.replay.nodes.length) throw Error("Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering.");
 											task.replay.pendingTasks--;
 										} catch (x) {
-											if ("object" === typeof x && null !== x && (x === SuspenseException || "function" === typeof x.then)) throw task.node === keyOrIndex ? task.replay = replay : childIndex.splice(node, 1), x;
+											if ("object" === typeof x && null !== x && (x === SuspenseException || "function" === typeof x.then || "Maximum call stack size exceeded" === x.message)) throw task.node === currentNode ? task.replay = replay : childIndex.splice(node, 1), x;
 											task.replay.pendingTasks--;
-											props = getThrownInfo(task.componentStack);
-											key = request;
-											request = task.blockedBoundary;
-											type = x;
-											props = logRecoverableError(key, type, props);
-											abortRemainingReplayNodes(key, request, childNodes, name, type, props);
+											key = getThrownInfo(task.componentStack);
+											currentNode = request;
+											props = task.blockedBoundary;
+											request = request.aborted ? request.fatalError : x;
+											key = logRecoverableError(currentNode, request, key);
+											abortRemainingReplayNodes(currentNode, props, childNodes, childSlots, request, key);
 										}
 										task.replay = replay;
 									} else {
 										if (type !== REACT_SUSPENSE_TYPE) throw Error("Expected the resume to render <Suspense> in this slot but instead it rendered <" + (getComponentNameFromType(type) || "Unknown") + ">. The tree doesn't match so React will fallback to client rendering.");
 										b: {
-											replay = void 0;
-											type = node$jscomp$0[5];
-											ref = node$jscomp$0[2];
-											name = node$jscomp$0[3];
-											keyOrIndex = null === node$jscomp$0[4] ? [] : node$jscomp$0[4][2];
+											replay = node$jscomp$0[5];
+											type = node$jscomp$0[2];
+											ref = node$jscomp$0[3];
+											name = null === node$jscomp$0[4] ? [] : node$jscomp$0[4][2];
 											node$jscomp$0 = null === node$jscomp$0[4] ? null : node$jscomp$0[4][3];
-											var prevKeyPath = task.keyPath, prevContext = task.formatContext, prevRow = task.row, previousReplaySet = task.replay, parentBoundary = task.blockedBoundary, parentHoistableState = task.hoistableState, content = props.children, fallback = props.fallback, fallbackAbortSet = /* @__PURE__ */ new Set();
-											props = 2 > task.formatContext.insertionMode ? createSuspenseBoundary(request, task.row, fallbackAbortSet, createPreambleState(), createPreambleState()) : createSuspenseBoundary(request, task.row, fallbackAbortSet, null, null);
-											props.parentFlushed = !0;
-											props.rootSegmentID = type;
-											task.blockedBoundary = props;
-											task.hoistableState = props.contentState;
+											keyOrIndex = task.keyPath;
+											var prevContext = task.formatContext, prevRow = task.row, previousReplaySet = task.replay, parentBoundary = task.blockedBoundary, parentHoistableState = task.hoistableState, content = props.children;
+											props = props.fallback;
+											var fallbackAbortSet = /* @__PURE__ */ new Set(), resumedBoundary = createSuspenseBoundary(request, task.row, fallbackAbortSet, 2 > task.formatContext.insertionMode ? {
+												content: createPreambleState(),
+												fallback: createPreambleState()
+											} : null, !1);
+											resumedBoundary.parentFlushed = !0;
+											resumedBoundary.rootSegmentID = replay;
+											task.blockedBoundary = resumedBoundary;
+											task.hoistableState = resumedBoundary.contentState;
 											task.keyPath = key;
 											task.formatContext = getSuspenseContentFormatContext(request.resumableState, prevContext);
 											task.row = null;
 											task.replay = {
-												nodes: ref,
-												slots: name,
+												nodes: type,
+												slots: ref,
 												pendingTasks: 1
 											};
 											try {
 												renderNode(request, task, content, -1);
 												if (1 === task.replay.pendingTasks && 0 < task.replay.nodes.length) throw Error("Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering.");
 												task.replay.pendingTasks--;
-												if (0 === props.pendingTasks && 0 === props.status) {
-													props.status = 1;
-													request.completedBoundaries.push(props);
+												if (0 === resumedBoundary.pendingTasks && 0 === resumedBoundary.status) {
+													resumedBoundary.status = 1;
+													request.completedBoundaries.push(resumedBoundary);
 													break b;
 												}
-											} catch (error) {
-												props.status = 4, childNodes = getThrownInfo(task.componentStack), replay = logRecoverableError(request, error, childNodes), props.errorDigest = replay, task.replay.pendingTasks--, request.clientRenderedBoundaries.push(props);
+											} catch (thrownValue) {
+												resumedBoundary.status = 4, childNodes = request.aborted ? request.fatalError : thrownValue, childSlots = getThrownInfo(task.componentStack), currentNode = logRecoverableError(request, childNodes, childSlots), resumedBoundary.errorDigest = currentNode, task.replay.pendingTasks--, request.clientRenderedBoundaries.push(resumedBoundary);
 											} finally {
-												task.blockedBoundary = parentBoundary, task.hoistableState = parentHoistableState, task.replay = previousReplaySet, task.keyPath = prevKeyPath, task.formatContext = prevContext, task.row = prevRow;
+												task.blockedBoundary = parentBoundary, task.hoistableState = parentHoistableState, task.replay = previousReplaySet, task.keyPath = keyOrIndex, task.formatContext = prevContext, task.row = prevRow;
 											}
 											childNodes = createReplayTask(request, null, {
-												nodes: keyOrIndex,
+												nodes: name,
 												slots: node$jscomp$0,
 												pendingTasks: 0
-											}, fallback, -1, parentBoundary, props.fallbackState, fallbackAbortSet, [
+											}, props, -1, parentBoundary, resumedBoundary.fallbackState, fallbackAbortSet, [
 												key[0],
 												"Suspense Fallback",
 												key[2]
@@ -12563,7 +12955,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					case REACT_LAZY_TYPE:
 						childNodes = node._init;
 						node = childNodes(node._payload);
-						if (12 === request.status) throw null;
+						if (request.aborted) throw null;
 						renderNodeDestructive(request, task, node, childIndex);
 						return;
 				}
@@ -12575,11 +12967,11 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					if (childNodes = childNodes.call(node)) {
 						node = childNodes.next();
 						if (!node.done) {
-							props = [];
+							childSlots = [];
 							do
-								props.push(node.value), node = childNodes.next();
+								childSlots.push(node.value), node = childNodes.next();
 							while (!node.done);
-							renderChildrenArray(request, task, props, childIndex);
+							renderChildrenArray(request, task, childSlots, childIndex);
 						}
 						return;
 					}
@@ -12617,10 +13009,12 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					} catch (x) {
 						if ("object" === typeof x && null !== x && (x === SuspenseException || "function" === typeof x.then)) throw x;
 						task.replay.pendingTasks--;
-						children = getThrownInfo(task.componentStack);
-						var boundary = task.blockedBoundary, error = x;
-						children = logRecoverableError(request, error, children);
-						abortRemainingReplayNodes(request, boundary, childIndex, node, error, children);
+						var thrownInfo = getThrownInfo(task.componentStack);
+						children = request;
+						var boundary = task.blockedBoundary;
+						request = request.aborted ? request.fatalError : x;
+						thrownInfo = logRecoverableError(children, request, thrownInfo);
+						abortRemainingReplayNodes(children, boundary, childIndex, node, request, thrownInfo);
 					}
 					task.replay = replay;
 					replayNodes.splice(j, 1);
@@ -12645,18 +13039,21 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	function trackPostponedBoundary(request, trackedPostpones, boundary) {
 		boundary.status = 5;
 		boundary.rootSegmentID = request.nextSegmentId++;
-		request = boundary.trackedContentKeyPath;
+		var tracked = boundary.tracked;
+		if (null === tracked) throw Error("It should not be possible to postpone at the root. This is a bug in React.");
+		request = tracked.contentKeyPath;
 		if (null === request) throw Error("It should not be possible to postpone at the root. This is a bug in React.");
-		var fallbackReplayNode = boundary.trackedFallbackNode, children = [], boundaryNode = trackedPostpones.workingMap.get(request);
+		tracked = tracked.fallbackNode;
+		var children = [], boundaryNode = trackedPostpones.workingMap.get(request);
 		if (void 0 === boundaryNode) return boundary = [
 			request[1],
 			request[2],
 			children,
 			null,
-			fallbackReplayNode,
+			tracked,
 			boundary.rootSegmentID
 		], trackedPostpones.workingMap.set(request, boundary), addToReplayParent(boundary, request[0], trackedPostpones), boundary;
-		boundaryNode[4] = fallbackReplayNode;
+		boundaryNode[4] = tracked;
 		boundaryNode[5] = boundary.rootSegmentID;
 		return boundaryNode;
 	}
@@ -12667,7 +13064,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		else {
 			if (null !== boundary && 0 === boundary.status) {
 				var boundaryNode = trackPostponedBoundary(request, trackedPostpones, boundary);
-				if (boundary.trackedContentKeyPath === keyPath && -1 === task.childIndex) {
+				if (null !== boundary.tracked && boundary.tracked.contentKeyPath === keyPath && -1 === task.childIndex) {
 					-1 === segment.id && (segment.id = segment.parentFlushed ? boundary.rootSegmentID : request.nextSegmentId++);
 					boundaryNode[3] = segment.id;
 					return;
@@ -12698,7 +13095,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	}
 	function untrackBoundary(request, boundary) {
 		request = request.trackedPostpones;
-		null !== request && (boundary = boundary.trackedContentKeyPath, null !== boundary && (boundary = request.workingMap.get(boundary), void 0 !== boundary && (boundary.length = 4, boundary[2] = [], boundary[3] = null)));
+		null !== request && (boundary = boundary.tracked, null !== boundary && (boundary = boundary.contentKeyPath, null !== boundary && (request = request.workingMap.get(boundary), void 0 !== request && (request.length = 4, request[2] = [], request[3] = null))));
 	}
 	function spawnNewSuspendedReplayTask(request, task, thenableState) {
 		return createReplayTask(request, thenableState, task.replay, task.node, task.childIndex, task.blockedBoundary, task.hoistableState, task.abortSet, task.keyPath, task.formatContext, task.context, task.treeContext, task.row, task.componentStack);
@@ -12716,11 +13113,11 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			try {
 				return renderNodeDestructive(request, task, node, childIndex);
 			} catch (thrownValue) {
-				if (resetHooksState(), node = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue, 12 !== request.status && "object" === typeof node && null !== node) {
+				if (resetHooksState(), node = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue, !request.aborted && "object" === typeof node && null !== node) {
 					if ("function" === typeof node.then) {
 						childIndex = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
 						request = spawnNewSuspendedReplayTask(request, task, childIndex).ping;
-						node.then(request, request);
+						node.then(request.resolve, request.reject);
 						task.formatContext = previousFormatContext;
 						task.context = previousContext;
 						task.keyPath = previousKeyPath;
@@ -12749,13 +13146,13 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			var childrenLength = segment.children.length, chunkLength = segment.chunks.length;
 			try {
 				return renderNodeDestructive(request, task, node, childIndex);
-			} catch (thrownValue$63) {
-				if (resetHooksState(), segment.children.length = childrenLength, segment.chunks.length = chunkLength, node = thrownValue$63 === SuspenseException ? getSuspendedThenable() : thrownValue$63, 12 !== request.status && "object" === typeof node && null !== node) {
+			} catch (thrownValue$64) {
+				if (resetHooksState(), segment.children.length = childrenLength, segment.chunks.length = chunkLength, node = thrownValue$64 === SuspenseException ? getSuspendedThenable() : thrownValue$64, !request.aborted && "object" === typeof node && null !== node) {
 					if ("function" === typeof node.then) {
 						segment = node;
-						node = thrownValue$63 === SuspenseException ? getThenableStateAfterSuspending() : null;
+						node = thrownValue$64 === SuspenseException ? getThenableStateAfterSuspending() : null;
 						request = spawnNewSuspendedRenderTask(request, task, node).ping;
-						segment.then(request, request);
+						segment.then(request.resolve, request.reject);
 						task.formatContext = previousFormatContext;
 						task.context = previousContext;
 						task.keyPath = previousKeyPath;
@@ -12765,7 +13162,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						return;
 					}
 					if ("Maximum call stack size exceeded" === node.message) {
-						segment = thrownValue$63 === SuspenseException ? getThenableStateAfterSuspending() : null;
+						segment = thrownValue$64 === SuspenseException ? getThenableStateAfterSuspending() : null;
 						segment = spawnNewSuspendedRenderTask(request, task, segment);
 						request.pingedTasks.push(segment);
 						task.formatContext = previousFormatContext;
@@ -12796,7 +13193,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			if (4 === node.length) abortRemainingReplayNodes(request$jscomp$0, boundary, node[2], node[3], error, errorDigest$jscomp$0);
 			else {
 				node = node[5];
-				var request = request$jscomp$0, errorDigest = errorDigest$jscomp$0, resumedBoundary = createSuspenseBoundary(request, null, /* @__PURE__ */ new Set(), null, null);
+				var request = request$jscomp$0, errorDigest = errorDigest$jscomp$0, resumedBoundary = createSuspenseBoundary(request, null, /* @__PURE__ */ new Set(), null, !1);
 				resumedBoundary.parentFlushed = !0;
 				resumedBoundary.rootSegmentID = node;
 				resumedBoundary.status = 4;
@@ -12811,50 +13208,54 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			if ("object" === typeof slots) for (var index in slots) delete slots[index];
 		}
 	}
-	function abortTask(task, request, error) {
-		var boundary = task.blockedBoundary, segment = task.blockedSegment;
-		if (null !== segment) {
-			if (6 === segment.status) return;
-			segment.status = 3;
-		}
-		var errorInfo = getThrownInfo(task.componentStack);
-		if (null === boundary) {
-			if (13 !== request.status && 14 !== request.status) {
-				boundary = task.replay;
-				if (null === boundary) {
-					null !== request.trackedPostpones && null !== segment ? (boundary = request.trackedPostpones, logRecoverableError(request, error, errorInfo), trackPostpone(request, boundary, task, segment), finishedTask(request, null, task.row, segment)) : (logRecoverableError(request, error, errorInfo), fatalError(request, error));
-					return;
-				}
-				boundary.pendingTasks--;
-				0 === boundary.pendingTasks && 0 < boundary.nodes.length && (segment = logRecoverableError(request, error, errorInfo), abortRemainingReplayNodes(request, null, boundary.nodes, boundary.slots, error, segment));
-				request.pendingRootTasks--;
-				0 === request.pendingRootTasks && completeShell(request);
-			}
-		} else {
-			var trackedPostpones$64 = request.trackedPostpones;
-			if (4 !== boundary.status) {
-				if (null !== trackedPostpones$64 && null !== segment) return logRecoverableError(request, error, errorInfo), trackPostpone(request, trackedPostpones$64, task, segment), boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
-					return abortTask(fallbackTask, request, error);
-				}), boundary.fallbackAbortableTasks.clear(), finishedTask(request, boundary, task.row, segment);
-				boundary.status = 4;
-				segment = logRecoverableError(request, error, errorInfo);
-				boundary.status = 4;
-				boundary.errorDigest = segment;
-				untrackBoundary(request, boundary);
-				boundary.parentFlushed && request.clientRenderedBoundaries.push(boundary);
-			}
-			boundary.pendingTasks--;
-			segment = boundary.row;
-			null !== segment && 0 === --segment.pendingTasks && finishSuspenseListRow(request, segment);
-			boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
-				return abortTask(fallbackTask, request, error);
+	function abortTask(task, request) {
+		if (task !== request.currentTask) {
+			var boundary = task.blockedBoundary;
+			task = task.blockedSegment;
+			null !== task && (task.status = 3);
+			null !== boundary && boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
+				return abortTask(fallbackTask, request);
 			});
-			boundary.fallbackAbortableTasks.clear();
 		}
-		task = task.row;
-		null !== task && 0 === --task.pendingTasks && finishSuspenseListRow(request, task);
-		request.allPendingTasks--;
-		0 === request.allPendingTasks && completeAll(request);
+	}
+	function finishAbortedTask(task, request, error) {
+		if (task !== request.currentTask) {
+			var boundary = task.blockedBoundary, segment = task.blockedSegment;
+			if (null === segment || 3 === segment.status) {
+				var errorInfo = getThrownInfo(task.componentStack), isRecoverableReason = isRecoverableError(error);
+				if (null === boundary) {
+					boundary = task.replay;
+					if (null === boundary) {
+						isRecoverableReason || null === request.trackedPostpones || null === segment ? isRecoverableReason ? (task = cloneRecoverableErrorAsFatal(error), logRecoverableError(request, task, errorInfo), 12 !== request.status && 13 !== request.status && fatalError(request, task)) : (logRecoverableError(request, error, errorInfo), 12 !== request.status && 13 !== request.status && fatalError(request, error)) : (boundary = request.trackedPostpones, logRecoverableError(request, error, errorInfo), trackPostpone(request, boundary, task, segment), finishedTask(request, null, task.row, segment));
+						return;
+					}
+					12 !== request.status && 13 !== request.status && (boundary.pendingTasks--, 0 === boundary.pendingTasks && 0 < boundary.nodes.length && (errorInfo = logRecoverableError(request, error, errorInfo), abortRemainingReplayNodes(request, null, boundary.nodes, boundary.slots, error, errorInfo)), request.pendingRootTasks--, 0 === request.pendingRootTasks && completeShell(request));
+				} else {
+					var trackedPostpones$65 = request.trackedPostpones;
+					if (4 !== boundary.status) {
+						if (!isRecoverableReason && null !== trackedPostpones$65 && null !== segment) return logRecoverableError(request, error, errorInfo), trackPostpone(request, trackedPostpones$65, task, segment), boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
+							return finishAbortedTask(fallbackTask, request, error);
+						}), boundary.fallbackAbortableTasks.clear(), finishedTask(request, boundary, task.row, segment);
+						boundary.status = 4;
+						errorInfo = logRecoverableError(request, error, errorInfo);
+						boundary.errorDigest = errorInfo;
+						untrackBoundary(request, boundary);
+						boundary.parentFlushed && request.clientRenderedBoundaries.push(boundary);
+					}
+					boundary.pendingTasks--;
+					errorInfo = boundary.row;
+					null !== errorInfo && 0 === --errorInfo.pendingTasks && finishSuspenseListRow(request, errorInfo);
+					boundary.fallbackAbortableTasks.forEach(function(fallbackTask) {
+						return finishAbortedTask(fallbackTask, request, error);
+					});
+					boundary.fallbackAbortableTasks.clear();
+				}
+				task = task.row;
+				null !== task && 0 === --task.pendingTasks && finishSuspenseListRow(request, task);
+				request.allPendingTasks--;
+				0 === request.allPendingTasks && completeAll(request);
+			}
+		}
 	}
 	function safelyEmitEarlyPreloads(request, shellComplete) {
 		try {
@@ -12892,7 +13293,6 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	function completeShell(request) {
 		null === request.trackedPostpones && safelyEmitEarlyPreloads(request, !0);
 		null === request.trackedPostpones && preparePreamble(request);
-		request.onShellError = noop;
 		request = request.onShellReady;
 		request();
 	}
@@ -12928,7 +13328,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			request.pendingRootTasks--;
 			0 === request.pendingRootTasks && completeShell(request);
 		} else if (boundary.pendingTasks--, 4 !== boundary.status) if (0 === boundary.pendingTasks) {
-			if (0 === boundary.status && (boundary.status = 1), null !== segment && segment.parentFlushed && (1 === segment.status || 3 === segment.status) && queueCompletedSegment(boundary, segment), boundary.parentFlushed && request.completedBoundaries.push(boundary), 1 === boundary.status) row = boundary.row, null !== row && hoistHoistables(row.hoistables, boundary.contentState), isEligibleForOutlining(request, boundary) || (boundary.fallbackAbortableTasks.forEach(abortTaskSoft, request), boundary.fallbackAbortableTasks.clear(), null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row)), 0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary.contentPreamble && preparePreamble(request);
+			if (0 === boundary.status && (boundary.status = 1), null !== segment && segment.parentFlushed && (1 === segment.status || 3 === segment.status) && queueCompletedSegment(boundary, segment), boundary.parentFlushed && request.completedBoundaries.push(boundary), 1 === boundary.status) row = boundary.row, null !== row && hoistHoistables(row.hoistables, boundary.contentState), isEligibleForOutlining(request, boundary) || (request.allPendingTasks++, boundary.fallbackAbortableTasks.forEach(abortTaskSoft, request), boundary.fallbackAbortableTasks.clear(), null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row), request.allPendingTasks--), 0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary.preamble && preparePreamble(request);
 			else if (5 === boundary.status && (boundary = boundary.row, null !== boundary)) {
 				if (null !== request.trackedPostpones) {
 					row = request.trackedPostpones;
@@ -12939,106 +13339,142 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 						finishedTask(request, postponedBoundary, null, null);
 					}
 				}
+				request.allPendingTasks++;
 				0 === --boundary.pendingTasks && finishSuspenseListRow(request, boundary);
+				request.allPendingTasks--;
 			}
 		} else null === segment || !segment.parentFlushed || 1 !== segment.status && 3 !== segment.status || (queueCompletedSegment(boundary, segment), 1 === boundary.completedSegments.length && boundary.parentFlushed && request.partialBoundaries.push(boundary)), boundary = boundary.row, null !== boundary && boundary.together && tryToResolveTogetherRow(request, boundary);
 		0 === request.allPendingTasks && completeAll(request);
 	}
-	function performWork(request$jscomp$2) {
-		if (14 !== request$jscomp$2.status && 13 !== request$jscomp$2.status) {
+	function performWork(request$jscomp$1) {
+		if (!(request$jscomp$1.aborted || 11 < request$jscomp$1.status)) {
 			var prevContext = currentActiveSnapshot, prevDispatcher = ReactSharedInternals.H;
 			ReactSharedInternals.H = HooksDispatcher;
 			var prevAsyncDispatcher = ReactSharedInternals.A;
 			ReactSharedInternals.A = DefaultAsyncDispatcher;
 			var prevRequest = currentRequest;
-			currentRequest = request$jscomp$2;
+			currentRequest = request$jscomp$1;
 			var prevResumableState = currentResumableState;
-			currentResumableState = request$jscomp$2.resumableState;
+			currentResumableState = request$jscomp$1.resumableState;
 			try {
-				var pingedTasks = request$jscomp$2.pingedTasks, i;
+				var pingedTasks = request$jscomp$1.pingedTasks, i;
 				for (i = 0; i < pingedTasks.length; i++) {
-					var task = pingedTasks[i], request = request$jscomp$2, segment = task.blockedSegment;
+					var task = pingedTasks[i], request = request$jscomp$1, segment = task.blockedSegment;
 					if (null === segment) {
-						var request$jscomp$0 = request;
-						if (0 !== task.replay.pendingTasks) {
+						a: if (0 !== task.replay.pendingTasks) {
+							var prevTask = request.currentTask;
+							request.currentTask = task;
 							switchContext(task.context);
+							var startNode = task.node;
 							try {
-								"number" === typeof task.replay.slots ? resumeNode(request$jscomp$0, task, task.replay.slots, task.node, task.childIndex) : retryNode(request$jscomp$0, task);
+								"number" === typeof task.replay.slots ? resumeNode(request, task, task.replay.slots, task.node, task.childIndex) : retryNode(request, task);
 								if (1 === task.replay.pendingTasks && 0 < task.replay.nodes.length) throw Error("Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering.");
 								task.replay.pendingTasks--;
 								task.abortSet.delete(task);
-								finishedTask(request$jscomp$0, task.blockedBoundary, task.row, null);
+								finishedTask(request, task.blockedBoundary, task.row, null);
 							} catch (thrownValue) {
 								resetHooksState();
 								var x = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue;
-								if ("object" === typeof x && null !== x && "function" === typeof x.then) {
-									var ping = task.ping;
-									x.then(ping, ping);
-									task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
+								if (request.aborted) {
+									thrownValue === SuspenseException && (task.thenableState = getThenableStateAfterSuspending());
+									request.currentTask = prevTask;
+									var request$jscomp$0 = request;
+									abortTask(task, request$jscomp$0);
+									task.abortSet.delete(task);
+									finishAbortedTask(task, request$jscomp$0, request$jscomp$0.fatalError);
 								} else {
+									if ("object" === typeof x && null !== x) {
+										if ("function" === typeof x.then) {
+											var ping = task.ping;
+											x.then(ping.resolve, ping.reject);
+											task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
+											break a;
+										}
+										if ("Maximum call stack size exceeded" === x.message && task.node !== startNode) {
+											task.thenableState = null;
+											request.pingedTasks.push(task);
+											break a;
+										}
+									}
 									task.replay.pendingTasks--;
 									task.abortSet.delete(task);
 									var errorInfo = getThrownInfo(task.componentStack);
-									request = void 0;
-									var request$jscomp$1 = request$jscomp$0, boundary = task.blockedBoundary, error$jscomp$0 = 12 === request$jscomp$0.status ? request$jscomp$0.fatalError : x, replayNodes = task.replay.nodes, resumeSlots = task.replay.slots;
-									request = logRecoverableError(request$jscomp$1, error$jscomp$0, errorInfo);
-									abortRemainingReplayNodes(request$jscomp$1, boundary, replayNodes, resumeSlots, error$jscomp$0, request);
-									request$jscomp$0.pendingRootTasks--;
-									0 === request$jscomp$0.pendingRootTasks && completeShell(request$jscomp$0);
-									request$jscomp$0.allPendingTasks--;
-									0 === request$jscomp$0.allPendingTasks && completeAll(request$jscomp$0);
+									request$jscomp$0 = request;
+									var boundary = task.blockedBoundary, error$jscomp$0 = request.aborted ? request.fatalError : x, replayNodes = task.replay.nodes, resumeSlots = task.replay.slots, errorDigest = logRecoverableError(request$jscomp$0, error$jscomp$0, errorInfo);
+									abortRemainingReplayNodes(request$jscomp$0, boundary, replayNodes, resumeSlots, error$jscomp$0, errorDigest);
+									request.pendingRootTasks--;
+									0 === request.pendingRootTasks && completeShell(request);
+									request.allPendingTasks--;
+									0 === request.allPendingTasks && completeAll(request);
 								}
+							} finally {
+								request.currentTask = prevTask;
 							}
 						}
-					} else if (request$jscomp$0 = void 0, request$jscomp$1 = segment, 0 === request$jscomp$1.status) {
-						request$jscomp$1.status = 6;
+					} else a: if (request$jscomp$0 = segment, 0 === request$jscomp$0.status) {
+						var prevTask$jscomp$0 = request.currentTask;
+						request.currentTask = task;
 						switchContext(task.context);
-						var childrenLength = request$jscomp$1.children.length, chunkLength = request$jscomp$1.chunks.length;
+						var childrenLength = request$jscomp$0.children.length, chunkLength = request$jscomp$0.chunks.length, startNode$jscomp$0 = task.node;
 						try {
-							retryNode(request, task), request$jscomp$1.lastPushedText && request$jscomp$1.textEmbedded && request$jscomp$1.chunks.push(textSeparator), task.abortSet.delete(task), request$jscomp$1.status = 1, finishedSegment(request, task.blockedBoundary, request$jscomp$1), finishedTask(request, task.blockedBoundary, task.row, request$jscomp$1);
+							retryNode(request, task), request$jscomp$0.lastPushedText && request$jscomp$0.textEmbedded && request$jscomp$0.chunks.push(textSeparator), task.abortSet.delete(task), request$jscomp$0.status = 1, finishedSegment(request, task.blockedBoundary, request$jscomp$0), finishedTask(request, task.blockedBoundary, task.row, request$jscomp$0);
 						} catch (thrownValue) {
 							resetHooksState();
-							request$jscomp$1.children.length = childrenLength;
-							request$jscomp$1.chunks.length = chunkLength;
-							var x$jscomp$0 = thrownValue === SuspenseException ? getSuspendedThenable() : 12 === request.status ? request.fatalError : thrownValue;
-							if (12 === request.status && null !== request.trackedPostpones) {
-								var trackedPostpones = request.trackedPostpones, thrownInfo = getThrownInfo(task.componentStack);
-								task.abortSet.delete(task);
-								logRecoverableError(request, x$jscomp$0, thrownInfo);
-								trackPostpone(request, trackedPostpones, task, request$jscomp$1);
-								finishedTask(request, task.blockedBoundary, task.row, request$jscomp$1);
-							} else if ("object" === typeof x$jscomp$0 && null !== x$jscomp$0 && "function" === typeof x$jscomp$0.then) {
-								request$jscomp$1.status = 0;
-								task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
-								var ping$jscomp$0 = task.ping;
-								x$jscomp$0.then(ping$jscomp$0, ping$jscomp$0);
-							} else {
+							request$jscomp$0.children.length = childrenLength;
+							request$jscomp$0.chunks.length = chunkLength;
+							var x$jscomp$0 = thrownValue === SuspenseException ? getSuspendedThenable() : thrownValue;
+							if (request.aborted) thrownValue === SuspenseException && (task.thenableState = getThenableStateAfterSuspending()), request.currentTask = prevTask$jscomp$0, request$jscomp$0 = request, abortTask(task, request$jscomp$0), task.abortSet.delete(task), finishAbortedTask(task, request$jscomp$0, request$jscomp$0.fatalError);
+							else {
+								if ("object" === typeof x$jscomp$0 && null !== x$jscomp$0) {
+									if ("function" === typeof x$jscomp$0.then) {
+										request$jscomp$0.status = 0;
+										task.thenableState = thrownValue === SuspenseException ? getThenableStateAfterSuspending() : null;
+										var ping$jscomp$0 = task.ping;
+										x$jscomp$0.then(ping$jscomp$0.resolve, ping$jscomp$0.reject);
+										break a;
+									}
+									if ("Maximum call stack size exceeded" === x$jscomp$0.message && task.node !== startNode$jscomp$0) {
+										request$jscomp$0.status = 0;
+										task.thenableState = null;
+										request.pingedTasks.push(task);
+										break a;
+									}
+								}
 								var errorInfo$jscomp$0 = getThrownInfo(task.componentStack);
 								task.abortSet.delete(task);
-								request$jscomp$1.status = 4;
+								request$jscomp$0.status = 4;
 								var boundary$jscomp$0 = task.blockedBoundary, row = task.row;
 								null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request, row);
 								request.allPendingTasks--;
-								request$jscomp$0 = logRecoverableError(request, x$jscomp$0, errorInfo$jscomp$0);
-								if (null === boundary$jscomp$0) fatalError(request, x$jscomp$0);
-								else if (boundary$jscomp$0.pendingTasks--, 4 !== boundary$jscomp$0.status) {
-									boundary$jscomp$0.status = 4;
-									boundary$jscomp$0.errorDigest = request$jscomp$0;
-									untrackBoundary(request, boundary$jscomp$0);
-									var boundaryRow = boundary$jscomp$0.row;
-									null !== boundaryRow && 0 === --boundaryRow.pendingTasks && finishSuspenseListRow(request, boundaryRow);
-									boundary$jscomp$0.parentFlushed && request.clientRenderedBoundaries.push(boundary$jscomp$0);
-									0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary$jscomp$0.contentPreamble && preparePreamble(request);
+								if (null === boundary$jscomp$0) if (isRecoverableError(x$jscomp$0)) {
+									var fatalRecoverableError = cloneRecoverableErrorAsFatal(x$jscomp$0);
+									logRecoverableError(request, fatalRecoverableError, errorInfo$jscomp$0);
+									fatalError(request, fatalRecoverableError);
+								} else logRecoverableError(request, x$jscomp$0, errorInfo$jscomp$0), fatalError(request, x$jscomp$0);
+								else {
+									var errorDigest$jscomp$0 = logRecoverableError(request, x$jscomp$0, errorInfo$jscomp$0);
+									boundary$jscomp$0.pendingTasks--;
+									if (4 !== boundary$jscomp$0.status) {
+										boundary$jscomp$0.status = 4;
+										boundary$jscomp$0.errorDigest = errorDigest$jscomp$0;
+										untrackBoundary(request, boundary$jscomp$0);
+										var boundaryRow = boundary$jscomp$0.row;
+										null !== boundaryRow && (request.allPendingTasks++, 0 === --boundaryRow.pendingTasks && finishSuspenseListRow(request, boundaryRow), request.allPendingTasks--);
+										boundary$jscomp$0.parentFlushed && request.clientRenderedBoundaries.push(boundary$jscomp$0);
+										0 === request.pendingRootTasks && null === request.trackedPostpones && null !== boundary$jscomp$0.preamble && preparePreamble(request);
+									}
+									0 === request.allPendingTasks && completeAll(request);
 								}
-								0 === request.allPendingTasks && completeAll(request);
 							}
+						} finally {
+							request.currentTask = prevTask$jscomp$0;
 						}
 					}
 				}
 				pingedTasks.splice(0, i);
-				null !== request$jscomp$2.destination && flushCompletedQueues(request$jscomp$2, request$jscomp$2.destination);
+				null !== request$jscomp$1.destination && flushCompletedQueues(request$jscomp$1, request$jscomp$1.destination);
 			} catch (error) {
-				logRecoverableError(request$jscomp$2, error, {}), fatalError(request$jscomp$2, error);
+				logRecoverableError(request$jscomp$1, error, {}), fatalError(request$jscomp$1, error);
 			} finally {
 				currentResumableState = prevResumableState, ReactSharedInternals.H = prevDispatcher, ReactSharedInternals.A = prevAsyncDispatcher, prevDispatcher === HooksDispatcher && switchContext(prevContext), currentRequest = prevRequest;
 			}
@@ -13052,17 +13488,17 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	function preparePreambleFromSegment(request, segment, collectedPreambleSegments) {
 		var boundary = segment.boundary;
 		if (null === boundary) return preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
-		var preamble = boundary.contentPreamble, fallbackPreamble = boundary.fallbackPreamble;
-		if (null === preamble || null === fallbackPreamble) return !1;
+		var preamble = boundary.preamble;
+		if (null === preamble) return !1;
 		switch (boundary.status) {
 			case 1:
-				hoistPreambleState(request.renderState, preamble);
+				hoistPreambleState(request.renderState, preamble.content);
 				request.byteSize += boundary.byteSize;
 				segment = boundary.completedSegments[0];
 				if (!segment) throw Error("A previously unvisited boundary must have exactly one root segment. This is a bug in React.");
 				return preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
 			case 5: if (null !== request.trackedPostpones) return !0;
-			case 4: if (1 === segment.status) return hoistPreambleState(request.renderState, fallbackPreamble), preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
+			case 4: if (1 === segment.status) return hoistPreambleState(request.renderState, preamble.fallback), preparePreambleFromSubtree(request, segment, collectedPreambleSegments);
 			default: return !0;
 		}
 	}
@@ -13096,6 +13532,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	function flushSegment(request, destination, segment, hoistableState) {
 		var boundary = segment.boundary;
 		if (null === boundary) return flushSubtree(request, destination, segment, hoistableState);
+		segment.boundary = null;
 		boundary.parentFlushed = !0;
 		if (4 === boundary.status) {
 			var row = boundary.row;
@@ -13103,11 +13540,11 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			boundary = boundary.errorDigest;
 			writeChunkAndReturn(destination, startClientRenderedSuspenseBoundary);
 			writeChunk(destination, clientRenderedSuspenseBoundaryError1);
-			boundary && (writeChunk(destination, clientRenderedSuspenseBoundaryError1A), writeChunk(destination, escapeTextForBrowser(boundary)), writeChunk(destination, clientRenderedSuspenseBoundaryErrorAttrInterstitial));
+			null != boundary && (writeChunk(destination, clientRenderedSuspenseBoundaryError1A), writeChunk(destination, escapeTextForBrowser(boundary)), writeChunk(destination, clientRenderedSuspenseBoundaryErrorAttrInterstitial));
 			writeChunkAndReturn(destination, clientRenderedSuspenseBoundaryError2);
 			flushSubtree(request, destination, segment, hoistableState);
 		} else if (1 !== boundary.status) 0 === boundary.status && (boundary.rootSegmentID = request.nextSegmentId++), 0 < boundary.completedSegments.length && request.partialBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.renderState, boundary.rootSegmentID), hoistableState && hoistHoistables(hoistableState, boundary.fallbackState), flushSubtree(request, destination, segment, hoistableState);
-		else if (!flushingPartialBoundaries && isEligibleForOutlining(request, boundary) && (flushedByteSize + boundary.byteSize > request.progressiveChunkSize || hasSuspenseyContent(boundary.contentState))) boundary.rootSegmentID = request.nextSegmentId++, request.completedBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.renderState, boundary.rootSegmentID), flushSubtree(request, destination, segment, hoistableState);
+		else if (!flushingPartialBoundaries && isEligibleForOutlining(request, boundary) && (flushedByteSize + boundary.byteSize > request.progressiveChunkSize || hasSuspenseyContent(boundary.contentState, flushingShell) || boundary.defer)) boundary.rootSegmentID = request.nextSegmentId++, request.completedBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.renderState, boundary.rootSegmentID), flushSubtree(request, destination, segment, hoistableState);
 		else {
 			flushedByteSize += boundary.byteSize;
 			hoistableState && hoistHoistables(hoistableState, boundary.contentState);
@@ -13136,11 +13573,11 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		request = request.renderState;
 		i = boundary.rootSegmentID;
 		boundary = boundary.contentState;
-		var requiresStyleInsertion = request.stylesToHoist;
+		var requiresStyleInsertion = request.stylesToHoist, requiresViewTransitions = 0 !== (completedSegments.instructions & 128);
 		request.stylesToHoist = !1;
 		writeChunk(destination, request.startInlineScript);
 		writeChunk(destination, endOfStartTag);
-		requiresStyleInsertion ? (0 === (completedSegments.instructions & 4) && (completedSegments.instructions |= 4, writeChunk(destination, clientRenderScriptFunctionOnly)), 0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, writeChunk(destination, completeBoundaryScriptFunctionOnly)), 0 === (completedSegments.instructions & 8) ? (completedSegments.instructions |= 8, writeChunk(destination, completeBoundaryWithStylesScript1FullPartial)) : writeChunk(destination, completeBoundaryWithStylesScript1Partial)) : (0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, writeChunk(destination, completeBoundaryScriptFunctionOnly)), writeChunk(destination, completeBoundaryScript1Partial));
+		requiresStyleInsertion ? (0 === (completedSegments.instructions & 4) && (completedSegments.instructions |= 4, writeChunk(destination, clientRenderScriptFunctionOnly)), 0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, writeChunk(destination, completeBoundaryScriptFunctionOnly)), requiresViewTransitions && 0 === (completedSegments.instructions & 256) && (completedSegments.instructions |= 256, writeChunk(destination, "$RV=function(B,g){function h(a,c){var e=a.getAttribute(c);e&&(c=a.style,l.push(a,c.viewTransitionName,c.viewTransitionClass),\"auto\"!==e&&(c.viewTransitionClass=e),(a=a.getAttribute(\"vt-name\"))||(a=\"_T_\"+N++ +\"_\"),a=CSS.escape(a)!==a?\"r-\"+btoa(a).replace(/=/g,\"\"):a,c.viewTransitionName=a,C=!0)}var C=!1,N=0,l=[];try{var f=document.__reactViewTransition;if(f){f.finished.finally($RV.bind(null,g));return}var m=new Map;for(f=1;f<g.length;f+=2)for(var k=g[f].querySelectorAll(\"[vt-share]\"),d=0;d<k.length;d++){var b=k[d];m.set(b.getAttribute(\"vt-name\"),b)}var u=[];for(k=0;k<g.length;k+=2){var D=g[k],x=D.parentNode;if(x){var v=x.getBoundingClientRect();if(v.left||v.top||v.width||v.height){b=D;for(f=0;b;){if(8===b.nodeType){var t=b.data;if(\"/$\"===t)if(0===f)break;else f--;else\"$\"!==t&&\"$?\"!==t&&\"$~\"!==t&&\"$!\"!==t||f++}else if(1===b.nodeType){d=b;var E=d.getAttribute(\"vt-name\"),y=m.get(E);h(d,y?\"vt-share\":\"vt-exit\");y&&(h(y,\"vt-share\"),m.set(E,null));for(var F=d.querySelectorAll(\"[vt-share]\"),\nz=0;z<F.length;z++){var G=F[z],H=G.getAttribute(\"vt-name\"),I=m.get(H);I&&(h(G,\"vt-share\"),h(I,\"vt-share\"),m.set(H,null))}var J=d.querySelectorAll(\"[vt-parent-exit]\");for(d=0;d<J.length;d++)h(J[d],\"vt-parent-exit\")}b=b.nextSibling}for(var K=g[k+1],n=K.firstElementChild;n;){null!==m.get(n.getAttribute(\"vt-name\"))&&h(n,\"vt-enter\");var L=n.querySelectorAll(\"[vt-parent-enter]\");for(b=0;b<L.length;b++)h(L[b],\"vt-parent-enter\");n=n.nextElementSibling}b=x;do for(var p=b.firstElementChild;p;){var M=p.getAttribute(\"vt-update\");\nM&&\"none\"!==M&&!l.includes(p)&&h(p,\"vt-update\");p=p.nextElementSibling}while((b=b.parentNode)&&1===b.nodeType&&\"none\"!==b.getAttribute(\"vt-update\"));u.push.apply(u,K.querySelectorAll('img[src]:not([loading=\"lazy\"])'))}}}if(C){var A=document.__reactViewTransition=document.startViewTransition({update:function(){B(g);for(var a=[document.documentElement.clientHeight,document.fonts.ready],c={},e=0;e<u.length;c={g:c.g},e++)if(c.g=u[e],!c.g.complete){var q=c.g.getBoundingClientRect();0<q.bottom&&0<q.right&&\nq.top<window.innerHeight&&q.left<window.innerWidth&&(q=new Promise(function(w){return function(r){w.g.addEventListener(\"load\",r);w.g.addEventListener(\"error\",r)}}(c)),a.push(q))}return Promise.race([Promise.all(a),new Promise(function(w){var r=performance.now();setTimeout(w,2300>r&&2E3<r?2300-r:500)})])},types:[]});A.ready.finally(function(){for(var a=l.length-3;0<=a;a-=3){var c=l[a],e=c.style;e.viewTransitionName=l[a+1];e.viewTransitionClass=l[a+1];\"\"===c.getAttribute(\"style\")&&c.removeAttribute(\"style\")}});\nA.finished.finally(function(){document.__reactViewTransition===A&&(document.__reactViewTransition=null)});$RB=[];return}}catch(a){}B(g)}.bind(null,$RV);")), 0 === (completedSegments.instructions & 8) ? (completedSegments.instructions |= 8, writeChunk(destination, completeBoundaryWithStylesScript1FullPartial)) : writeChunk(destination, completeBoundaryWithStylesScript1Partial)) : (0 === (completedSegments.instructions & 2) && (completedSegments.instructions |= 2, writeChunk(destination, completeBoundaryScriptFunctionOnly)), requiresViewTransitions && 0 === (completedSegments.instructions & 256) && (completedSegments.instructions |= 256, writeChunk(destination, "$RV=function(B,g){function h(a,c){var e=a.getAttribute(c);e&&(c=a.style,l.push(a,c.viewTransitionName,c.viewTransitionClass),\"auto\"!==e&&(c.viewTransitionClass=e),(a=a.getAttribute(\"vt-name\"))||(a=\"_T_\"+N++ +\"_\"),a=CSS.escape(a)!==a?\"r-\"+btoa(a).replace(/=/g,\"\"):a,c.viewTransitionName=a,C=!0)}var C=!1,N=0,l=[];try{var f=document.__reactViewTransition;if(f){f.finished.finally($RV.bind(null,g));return}var m=new Map;for(f=1;f<g.length;f+=2)for(var k=g[f].querySelectorAll(\"[vt-share]\"),d=0;d<k.length;d++){var b=k[d];m.set(b.getAttribute(\"vt-name\"),b)}var u=[];for(k=0;k<g.length;k+=2){var D=g[k],x=D.parentNode;if(x){var v=x.getBoundingClientRect();if(v.left||v.top||v.width||v.height){b=D;for(f=0;b;){if(8===b.nodeType){var t=b.data;if(\"/$\"===t)if(0===f)break;else f--;else\"$\"!==t&&\"$?\"!==t&&\"$~\"!==t&&\"$!\"!==t||f++}else if(1===b.nodeType){d=b;var E=d.getAttribute(\"vt-name\"),y=m.get(E);h(d,y?\"vt-share\":\"vt-exit\");y&&(h(y,\"vt-share\"),m.set(E,null));for(var F=d.querySelectorAll(\"[vt-share]\"),\nz=0;z<F.length;z++){var G=F[z],H=G.getAttribute(\"vt-name\"),I=m.get(H);I&&(h(G,\"vt-share\"),h(I,\"vt-share\"),m.set(H,null))}var J=d.querySelectorAll(\"[vt-parent-exit]\");for(d=0;d<J.length;d++)h(J[d],\"vt-parent-exit\")}b=b.nextSibling}for(var K=g[k+1],n=K.firstElementChild;n;){null!==m.get(n.getAttribute(\"vt-name\"))&&h(n,\"vt-enter\");var L=n.querySelectorAll(\"[vt-parent-enter]\");for(b=0;b<L.length;b++)h(L[b],\"vt-parent-enter\");n=n.nextElementSibling}b=x;do for(var p=b.firstElementChild;p;){var M=p.getAttribute(\"vt-update\");\nM&&\"none\"!==M&&!l.includes(p)&&h(p,\"vt-update\");p=p.nextElementSibling}while((b=b.parentNode)&&1===b.nodeType&&\"none\"!==b.getAttribute(\"vt-update\"));u.push.apply(u,K.querySelectorAll('img[src]:not([loading=\"lazy\"])'))}}}if(C){var A=document.__reactViewTransition=document.startViewTransition({update:function(){B(g);for(var a=[document.documentElement.clientHeight,document.fonts.ready],c={},e=0;e<u.length;c={g:c.g},e++)if(c.g=u[e],!c.g.complete){var q=c.g.getBoundingClientRect();0<q.bottom&&0<q.right&&\nq.top<window.innerHeight&&q.left<window.innerWidth&&(q=new Promise(function(w){return function(r){w.g.addEventListener(\"load\",r);w.g.addEventListener(\"error\",r)}}(c)),a.push(q))}return Promise.race([Promise.all(a),new Promise(function(w){var r=performance.now();setTimeout(w,2300>r&&2E3<r?2300-r:500)})])},types:[]});A.ready.finally(function(){for(var a=l.length-3;0<=a;a-=3){var c=l[a],e=c.style;e.viewTransitionName=l[a+1];e.viewTransitionClass=l[a+1];\"\"===c.getAttribute(\"style\")&&c.removeAttribute(\"style\")}});\nA.finished.finally(function(){document.__reactViewTransition===A&&(document.__reactViewTransition=null)});$RB=[];return}}catch(a){}B(g)}.bind(null,$RV);")), writeChunk(destination, completeBoundaryScript1Partial));
 		completedSegments = i.toString(16);
 		writeChunk(destination, request.boundaryPrefix);
 		writeChunk(destination, completedSegments);
@@ -13175,8 +13612,9 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		return destination;
 	}
 	var flushingPartialBoundaries = !1;
+	var flushingShell = !1;
 	function flushCompletedQueues(request, destination) {
-		currentView = /* @__PURE__ */ new Uint8Array(2048);
+		currentView = /* @__PURE__ */ new Uint8Array(4096);
 		writtenBytes = 0;
 		destinationHasCapacity$1 = !0;
 		try {
@@ -13227,7 +13665,9 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					(preamble$jscomp$0.htmlChunks || headChunks$jscomp$0) && writeChunk(destination, endChunkForTag("head"));
 					var bodyChunks = preamble$jscomp$0.bodyChunks;
 					if (bodyChunks) for (completedPreambleSegments = 0; completedPreambleSegments < bodyChunks.length; completedPreambleSegments++) writeChunk(destination, bodyChunks[completedPreambleSegments]);
+					flushingShell = !0;
 					flushSegment(request, destination, completedRootSegment, null);
+					flushingShell = !1;
 					request.completedRootSegment = null;
 					var renderState$jscomp$0 = request.renderState;
 					if (0 !== request.allPendingTasks || 0 !== request.clientRenderedBoundaries.length || 0 !== request.completedBoundaries.length || null !== request.trackedPostpones && (0 !== request.trackedPostpones.rootNodes.length || null !== request.trackedPostpones.rootSlots)) {
@@ -13279,7 +13719,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					writeChunk(renderState$jscomp$1, renderState$jscomp$2.boundaryPrefix);
 					writeChunk(renderState$jscomp$1, id.toString(16));
 					writeChunk(renderState$jscomp$1, clientRenderScript1A);
-					errorDigest && (writeChunk(renderState$jscomp$1, clientRenderErrorScriptArgInterstitial), writeChunk(renderState$jscomp$1, escapeJSStringsForInstructionScripts(errorDigest || "")));
+					null != errorDigest && (writeChunk(renderState$jscomp$1, clientRenderErrorScriptArgInterstitial), null == errorDigest ? writeChunk(renderState$jscomp$1, clientRenderErrorScriptNull) : writeChunk(renderState$jscomp$1, escapeJSStringsForInstructionScripts(errorDigest)));
 					var JSCompiler_inline_result = writeChunkAndReturn(renderState$jscomp$1, clientRenderScriptEnd);
 					if (!JSCompiler_inline_result) {
 						request.destination = null;
@@ -13298,27 +13738,27 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				}
 				completedBoundaries.splice(0, i);
 				completeWriting(destination);
-				currentView = /* @__PURE__ */ new Uint8Array(2048);
+				currentView = /* @__PURE__ */ new Uint8Array(4096);
 				writtenBytes = 0;
 				flushingPartialBoundaries = destinationHasCapacity$1 = !0;
 				var partialBoundaries = request.partialBoundaries;
 				for (i = 0; i < partialBoundaries.length; i++) {
-					var boundary$70 = partialBoundaries[i];
+					var boundary$71 = partialBoundaries[i];
 					a: {
 						clientRenderedBoundaries = request;
 						boundary = destination;
-						flushedByteSize = boundary$70.byteSize;
-						var completedSegments = boundary$70.completedSegments;
-						for (JSCompiler_inline_result = 0; JSCompiler_inline_result < completedSegments.length; JSCompiler_inline_result++) if (!flushPartiallyCompletedSegment(clientRenderedBoundaries, boundary, boundary$70, completedSegments[JSCompiler_inline_result])) {
+						flushedByteSize = boundary$71.byteSize;
+						var completedSegments = boundary$71.completedSegments;
+						for (JSCompiler_inline_result = 0; JSCompiler_inline_result < completedSegments.length; JSCompiler_inline_result++) if (!flushPartiallyCompletedSegment(clientRenderedBoundaries, boundary, boundary$71, completedSegments[JSCompiler_inline_result])) {
 							JSCompiler_inline_result++;
 							completedSegments.splice(0, JSCompiler_inline_result);
 							var JSCompiler_inline_result$jscomp$0 = !1;
 							break a;
 						}
 						completedSegments.splice(0, JSCompiler_inline_result);
-						var row = boundary$70.row;
-						null !== row && row.together && 1 === boundary$70.pendingTasks && (1 === row.pendingTasks ? unblockSuspenseListRow(clientRenderedBoundaries, row, row.hoistables) : row.pendingTasks--);
-						JSCompiler_inline_result$jscomp$0 = writeHoistablesForBoundary(boundary, boundary$70.contentState, clientRenderedBoundaries.renderState);
+						var row = boundary$71.row;
+						null !== row && row.together && 1 === boundary$71.pendingTasks && (1 === row.pendingTasks ? unblockSuspenseListRow(clientRenderedBoundaries, row, row.hoistables) : row.pendingTasks--);
+						JSCompiler_inline_result$jscomp$0 = writeHoistablesForBoundary(boundary, boundary$71.contentState, clientRenderedBoundaries.renderState);
 					}
 					if (!JSCompiler_inline_result$jscomp$0) {
 						request.destination = null;
@@ -13339,7 +13779,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 				largeBoundaries.splice(0, i);
 			}
 		} finally {
-			flushingPartialBoundaries = !1, 0 === request.allPendingTasks && 0 === request.clientRenderedBoundaries.length && 0 === request.completedBoundaries.length ? (request.flushScheduled = !1, i = request.resumableState, i.hasBody && writeChunk(destination, endChunkForTag("body")), i.hasHtml && writeChunk(destination, endChunkForTag("html")), completeWriting(destination), flushBuffered(destination), request.status = 14, destination.end(), request.destination = null) : (completeWriting(destination), flushBuffered(destination));
+			flushingPartialBoundaries = !1, i = request.postponedState, null !== i && (i.nextSegmentId = request.nextSegmentId), 0 === request.allPendingTasks && 0 === request.clientRenderedBoundaries.length && 0 === request.completedBoundaries.length ? (request.flushScheduled = !1, i = request.resumableState, i.hasBody && writeChunk(destination, endChunkForTag("body")), i.hasHtml && writeChunk(destination, endChunkForTag("html")), completeWriting(destination), flushBuffered(destination), endRenderLifetime(request), request.status = 13, destination.end(), request.destination = null) : (completeWriting(destination), flushBuffered(destination));
 		}
 	}
 	function startWork(request) {
@@ -13362,31 +13802,58 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		}));
 	}
 	function startFlowing(request, destination) {
-		if (13 === request.status) request.status = 14, destination.destroy(request.fatalError);
-		else if (14 !== request.status && null === request.destination) {
+		if (12 === request.status) request.status = 13, request = request.fatalError, isRecoverableError(request) && (request = cloneRecoverableErrorAsFatal(request)), destination.destroy(request);
+		else if (13 !== request.status && null === request.destination) {
 			request.destination = destination;
 			try {
 				flushCompletedQueues(request, destination);
-			} catch (error) {
-				logRecoverableError(request, error, {}), fatalError(request, error);
+			} catch (error$73) {
+				logRecoverableError(request, error$73, {}), fatalError(request, error$73);
 			}
 		}
 	}
-	function abort(request, reason) {
-		if (11 === request.status || 10 === request.status) request.status = 12;
+	function finishAbort(request, abortableTasks) {
 		try {
-			var abortableTasks = request.abortableTasks;
 			if (0 < abortableTasks.size) {
-				var error = void 0 === reason ? Error("The render was aborted by the server without a reason.") : "object" === typeof reason && null !== reason && "function" === typeof reason.then ? Error("The render was aborted by the server with a promise.") : reason;
-				request.fatalError = error;
+				var error = request.fatalError;
 				abortableTasks.forEach(function(task) {
-					return abortTask(task, request, error);
+					return finishAbortedTask(task, request, error);
 				});
 				abortableTasks.clear();
 			}
 			null !== request.destination && flushCompletedQueues(request, request.destination);
-		} catch (error$72) {
-			logRecoverableError(request, error$72, {}), fatalError(request, error$72);
+		} catch (error$74) {
+			logRecoverableError(request, error$74, {}), fatalError(request, error$74);
+		}
+	}
+	function endRenderLifetime(request) {
+		request = request.renderLifetimeController;
+		null !== request && request.abort("The render ended.");
+	}
+	function attachAbortSignal(request, signal) {
+		if (signal.aborted) abort(request, signal.reason);
+		else {
+			var renderLifetimeController = new AbortController();
+			request.renderLifetimeController = renderLifetimeController;
+			signal.addEventListener("abort", function() {
+				abort(request, signal.reason);
+			}, { signal: renderLifetimeController.signal });
+		}
+	}
+	function abort(request, reason) {
+		if (!(request.aborted || 11 !== request.status && 10 !== request.status)) {
+			endRenderLifetime(request);
+			var isRecoverableReason = "object" === typeof reason && null !== reason && reason.$$typeof === REACT_RECOVERABLE_TYPE;
+			request.aborted = !0;
+			reason = isRecoverableReason ? createRecoverableError(reason) : void 0 === reason ? Error("The render was aborted by the server without a reason.") : "object" === typeof reason && null !== reason && "function" === typeof reason.then ? Error("The render was aborted by the server with a promise.") : reason;
+			request.fatalError = reason;
+			var abortableTasks = request.abortableTasks;
+			abortableTasks.forEach(function(task) {
+				return abortTask(task, request);
+			});
+			setImmediate(function() {
+				return finishAbort(request, abortableTasks);
+			});
 		}
 	}
 	function addToReplayParent(node, parentKeyPath, trackedPostpones) {
@@ -13405,7 +13872,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	function getPostponedState(request) {
 		var trackedPostpones = request.trackedPostpones;
 		if (null === trackedPostpones || 0 === trackedPostpones.rootNodes.length && null === trackedPostpones.rootSlots) return request.trackedPostpones = null;
-		if (null === request.completedRootSegment || 5 !== request.completedRootSegment.status && null !== request.completedPreambleSegments) {
+		var hasFlushableShell = null === request.completedRootSegment || 5 !== request.completedRootSegment.status && null !== request.completedPreambleSegments;
+		if (hasFlushableShell) {
 			var nextSegmentId = request.nextSegmentId;
 			var replaySlots = trackedPostpones.rootSlots;
 			var resumableState = request.resumableState;
@@ -13430,7 +13898,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			resumableState.moduleScriptResources = {};
 			resumableState.instructions = 0;
 		}
-		return {
+		trackedPostpones = {
 			nextSegmentId,
 			rootFormatContext: request.rootFormatContext,
 			progressiveChunkSize: request.progressiveChunkSize,
@@ -13438,10 +13906,12 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			replayNodes: trackedPostpones.rootNodes,
 			replaySlots
 		};
+		hasFlushableShell && (request.postponedState = trackedPostpones);
+		return trackedPostpones;
 	}
 	function ensureCorrectIsomorphicReactVersion() {
 		var isomorphicReactPackageVersion = React.version;
-		if ("19.2.8" !== isomorphicReactPackageVersion) throw Error("Incompatible React versions: The \"react\" and \"react-dom\" packages must have the exact same version. Instead got:\n  - react:      " + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.8\nLearn more: https://react.dev/warnings/version-mismatch"));
+		if ("19.3.0" !== isomorphicReactPackageVersion) throw Error("Incompatible React versions: The \"react\" and \"react-dom\" packages must have the exact same version. Instead got:\n  - react:      " + (isomorphicReactPackageVersion + "\n  - react-dom:  19.3.0\nLearn more: https://react.dev/warnings/version-mismatch"));
 	}
 	ensureCorrectIsomorphicReactVersion();
 	function createDrainHandler(destination, request) {
@@ -13457,7 +13927,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 	}
 	function createRequestImpl(children, options) {
 		var resumableState = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0);
-		return createRequest(children, resumableState, createRenderState(resumableState, options ? options.nonce : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, options ? options.onHeaders : void 0, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, options ? options.onAllReady : void 0, options ? options.onShellReady : void 0, options ? options.onShellError : void 0, void 0, options ? options.onPostpone : void 0, options ? options.formState : void 0);
+		return createRequest(children, resumableState, createRenderState(resumableState, options ? options.nonce : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, options ? options.onHeaders : void 0, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, options ? options.onAllReady : void 0, options ? options.onShellReady : void 0, options ? options.onShellError : void 0, void 0, options ? options.formState : void 0);
 	}
 	function createFakeWritableFromReadableStreamController$1(controller) {
 		return {
@@ -13475,7 +13945,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 		};
 	}
 	function resumeRequestImpl(children, postponedState, options) {
-		return resumeRequest(children, postponedState, createRenderState(postponedState.resumableState, options ? options.nonce : void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, options ? options.onAllReady : void 0, options ? options.onShellReady : void 0, options ? options.onShellError : void 0, void 0, options ? options.onPostpone : void 0);
+		return resumeRequest(children, postponedState, createRenderState(postponedState.resumableState, options ? options.nonce : void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, options ? options.onAllReady : void 0, options ? options.onShellReady : void 0, options ? options.onShellError : void 0, void 0);
 	}
 	ensureCorrectIsomorphicReactVersion();
 	function createFakeWritableFromReadableStreamController(controller) {
@@ -13512,7 +13982,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			onHeaders && (onHeadersImpl = function(headersDescriptor) {
 				onHeaders(new Headers(headersDescriptor));
 			});
-			var resources = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), request = createPrerenderRequest(children, resources, createRenderState(resources, void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, onHeadersImpl, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, function() {
+			var resources = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), request = createPrerenderRequest(children, resources, createRenderState(resources, void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, onHeadersImpl, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, function() {
 				var writable, stream = new ReadableStream({
 					type: "bytes",
 					start: function(controller) {
@@ -13531,24 +14001,14 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					prelude: stream
 				};
 				resolve(stream);
-			}, void 0, void 0, reject, options ? options.onPostpone : void 0);
-			if (options && options.signal) {
-				var signal = options.signal;
-				if (signal.aborted) abort(request, signal.reason);
-				else {
-					var listener = function() {
-						abort(request, signal.reason);
-						signal.removeEventListener("abort", listener);
-					};
-					signal.addEventListener("abort", listener);
-				}
-			}
+			}, void 0, void 0, reject);
+			options && options.signal && attachAbortSignal(request, options.signal);
 			startWork(request);
 		});
 	};
 	exports.prerenderToNodeStream = function(children, options) {
 		return new Promise(function(resolve, reject) {
-			var resumableState = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), request = createPrerenderRequest(children, resumableState, createRenderState(resumableState, void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, options ? options.onHeaders : void 0, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, function() {
+			var resumableState = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), request = createPrerenderRequest(children, resumableState, createRenderState(resumableState, void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, options ? options.onHeaders : void 0, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, function() {
 				var readable = new stream.Readable({ read: function() {
 					startFlowing(request, writable);
 				} }), writable = createFakeWritableFromReadable(readable);
@@ -13557,18 +14017,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					prelude: readable
 				};
 				resolve(readable);
-			}, void 0, void 0, reject, options ? options.onPostpone : void 0);
-			if (options && options.signal) {
-				var signal = options.signal;
-				if (signal.aborted) abort(request, signal.reason);
-				else {
-					var listener = function() {
-						abort(request, signal.reason);
-						signal.removeEventListener("abort", listener);
-					};
-					signal.addEventListener("abort", listener);
-				}
-			}
+			}, void 0, void 0, reject);
+			options && options.signal && attachAbortSignal(request, options.signal);
 			startWork(request);
 		});
 	};
@@ -13600,7 +14050,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			onHeaders && (onHeadersImpl = function(headersDescriptor) {
 				onHeaders(new Headers(headersDescriptor));
 			});
-			var resumableState = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), request = createRequest(children, resumableState, createRenderState(resumableState, options ? options.nonce : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, onHeadersImpl, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, onAllReady, function() {
+			var resumableState = createResumableState(options ? options.identifierPrefix : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), request = createRequest(children, resumableState, createRenderState(resumableState, options ? options.nonce : void 0, options ? options.unstable_externalRuntimeSrc : void 0, options ? options.importMap : void 0, onHeadersImpl, options ? options.maxHeadersLength : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, onAllReady, function() {
 				var writable, stream = new ReadableStream({
 					type: "bytes",
 					start: function(controller) {
@@ -13619,18 +14069,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			}, function(error) {
 				allReady.catch(function() {});
 				reject(error);
-			}, onFatalError, options ? options.onPostpone : void 0, options ? options.formState : void 0);
-			if (options && options.signal) {
-				var signal = options.signal;
-				if (signal.aborted) abort(request, signal.reason);
-				else {
-					var listener = function() {
-						abort(request, signal.reason);
-						signal.removeEventListener("abort", listener);
-					};
-					signal.addEventListener("abort", listener);
-				}
-			}
+			}, onFatalError, options ? options.formState : void 0);
+			options && options.signal && attachAbortSignal(request, options.signal);
 			startWork(request);
 		});
 	};
@@ -13639,7 +14079,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			var onFatalError, onAllReady, allReady = new Promise(function(res, rej) {
 				onAllReady = res;
 				onFatalError = rej;
-			}), request = resumeRequest(children, postponedState, createRenderState(postponedState.resumableState, options ? options.nonce : void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, onAllReady, function() {
+			}), request = resumeRequest(children, postponedState, createRenderState(postponedState.resumableState, options ? options.nonce : void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, onAllReady, function() {
 				var writable, stream = new ReadableStream({
 					type: "bytes",
 					start: function(controller) {
@@ -13658,24 +14098,14 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			}, function(error) {
 				allReady.catch(function() {});
 				reject(error);
-			}, onFatalError, options ? options.onPostpone : void 0);
-			if (options && options.signal) {
-				var signal = options.signal;
-				if (signal.aborted) abort(request, signal.reason);
-				else {
-					var listener = function() {
-						abort(request, signal.reason);
-						signal.removeEventListener("abort", listener);
-					};
-					signal.addEventListener("abort", listener);
-				}
-			}
+			}, onFatalError);
+			options && options.signal && attachAbortSignal(request, options.signal);
 			startWork(request);
 		});
 	};
 	exports.resumeAndPrerender = function(children, postponedState, options) {
 		return new Promise(function(resolve, reject) {
-			var request = resumeAndPrerenderRequest(children, postponedState, createRenderState(postponedState.resumableState, void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, function() {
+			var request = resumeAndPrerenderRequest(children, postponedState, createRenderState(postponedState.resumableState, void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, function() {
 				var writable, stream = new ReadableStream({
 					type: "bytes",
 					start: function(controller) {
@@ -13694,24 +14124,14 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					prelude: stream
 				};
 				resolve(stream);
-			}, void 0, void 0, reject, options ? options.onPostpone : void 0);
-			if (options && options.signal) {
-				var signal = options.signal;
-				if (signal.aborted) abort(request, signal.reason);
-				else {
-					var listener = function() {
-						abort(request, signal.reason);
-						signal.removeEventListener("abort", listener);
-					};
-					signal.addEventListener("abort", listener);
-				}
-			}
+			}, void 0, void 0, reject);
+			options && options.signal && attachAbortSignal(request, options.signal);
 			startWork(request);
 		});
 	};
 	exports.resumeAndPrerenderToNodeStream = function(children, postponedState, options) {
 		return new Promise(function(resolve, reject) {
-			var request = resumeAndPrerenderRequest(children, postponedState, createRenderState(postponedState.resumableState, void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, function() {
+			var request = resumeAndPrerenderRequest(children, postponedState, createRenderState(postponedState.resumableState, void 0, void 0, void 0, void 0, void 0), options ? options.onError : void 0, options ? options.onBrowserBailout : void 0, function() {
 				var readable = new stream.Readable({ read: function() {
 					startFlowing(request, writable);
 				} }), writable = createFakeWritableFromReadable(readable);
@@ -13720,18 +14140,8 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 					prelude: readable
 				};
 				resolve(readable);
-			}, void 0, void 0, reject, options ? options.onPostpone : void 0);
-			if (options && options.signal) {
-				var signal = options.signal;
-				if (signal.aborted) abort(request, signal.reason);
-				else {
-					var listener = function() {
-						abort(request, signal.reason);
-						signal.removeEventListener("abort", listener);
-					};
-					signal.addEventListener("abort", listener);
-				}
-			}
+			}, void 0, void 0, reject);
+			options && options.signal && attachAbortSignal(request, options.signal);
 			startWork(request);
 		});
 	};
@@ -13753,7 +14163,7 @@ var require_react_dom_server_node_production = /* @__PURE__ */ __commonJSMin(((e
 			}
 		};
 	};
-	exports.version = "19.2.8";
+	exports.version = "19.3.0";
 }));
 //#endregion
 //#region node_modules/react-dom/server.node.js
