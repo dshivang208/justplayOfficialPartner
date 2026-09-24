@@ -10,13 +10,20 @@ export default defineConfig({
   nitro: {
     preset: "vercel",
 
-    // Nitro v3's default "rolldown" builder has a known bug where it splits
-    // shared deps (like @supabase/functions-js) into _libs/ chunks and
-    // leaves a raw, unresolved `require("tslib")` behind instead of
-    // bundling it in — which is exactly the ERR_MODULE_NOT_FOUND you saw on
-    // Vercel. The classic "rollup" builder doesn't have this bug and is the
-    // one externals.inline below was designed for.
-    builder: "rollup",
+    // Nitro's default code-splitting groups every node_modules package into
+    // its own shared "_libs/<name>.mjs" chunk. With this project's Rolldown
+    // build pipeline, that step has a bug: it leaves a raw, unresolved
+    // `require("tslib")`/`import "tslib"` behind inside the chunk instead of
+    // actually bundling tslib's code into it — which is exactly the
+    // ERR_MODULE_NOT_FOUND for /var/task/_libs/supabase__functions-js.mjs
+    // seen on Vercel. Setting inlineDynamicImports makes Nitro skip that
+    // chunk-splitting step entirely and bundle tslib directly into whatever
+    // file needs it, so there's no separate _libs chunk left to go missing.
+    rollupConfig: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
 
     externals: {
       inline: [
