@@ -17,4 +17,13 @@ export default defineConfig({
       ],
     },
   },
+
+  vite: {
+    ssr: {
+      noExternal: [
+        "tslib",
+        "@supabase/functions-js",
+      ],
+    },
+  },
 });
