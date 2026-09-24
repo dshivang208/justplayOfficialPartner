@@ -20,6 +20,10 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Vercel — never commit prebuilt output; Vercel will skip the real build
+# and just redeploy this stale folder forever if it's tracked in git.
+.vercel
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
