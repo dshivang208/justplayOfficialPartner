@@ -1,0 +1,1 @@
+import{t as e}from"./useStore-_X7btxmK.js";import{t}from"./useRouter-CwjitLz4.js";import{w as n}from"./index-BWkL6qrz.js";function r(r){let i=t();return e(i.stores.location,n(r,i))}export{r as t};
