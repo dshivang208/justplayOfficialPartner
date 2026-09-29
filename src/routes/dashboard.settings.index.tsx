@@ -1,15 +1,25 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertOctagon,
   Camera,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   ListChecks,
+  LocateFixed,
   MapPin,
   X,
 } from "lucide-react";
-import { useVenueProfile, AMENITY_OPTIONS } from "@/lib/venueProfile";
+import { useVenueProfile, AMENITY_OPTIONS, AREA_OPTIONS, TAGLINE_MAX } from "@/lib/venueProfile";
+import {
+  KANPUR_CENTER,
+  distanceKm,
+  formatPin,
+  mapsLink,
+  parsePinInput,
+  round6,
+} from "@/lib/geo";
 import { useInventory } from "@/lib/inventory";
 import { formatTimeLabel } from "@/data/inventory";
 import { Button } from "@/components/partner/Button";
@@ -29,6 +39,7 @@ function VenueProfilePage() {
     addPhoto,
     removePhoto,
     reorderPhoto,
+    saveLocation,
     submitMajorChange,
     discardPendingChange,
   } = useVenueProfile();
@@ -41,6 +52,124 @@ function VenueProfilePage() {
   const [descriptionSaved, setDescriptionSaved] = useState(true);
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [savingField, setSavingField] = useState<"name" | "address" | "discard" | null>(null);
+
+  // The profile loads asynchronously (and again after each save), but useState
+  // above only reads it once at mount — so on a hard refresh of this page the
+  // boxes started blank and "Submit" was enabled for an empty venue name. Keep
+  // each draft in step with the saved value; this only fires when the SAVED
+  // value changes, so it never overwrites text the owner is mid-typing.
+  useEffect(() => {
+    setNameDraft(profile.pendingName ?? profile.name);
+  }, [profile.name, profile.pendingName]);
+  useEffect(() => {
+    setAddressDraft(profile.pendingAddress ?? profile.address);
+  }, [profile.address, profile.pendingAddress]);
+  useEffect(() => {
+    setDescriptionDraft(profile.description);
+    setDescriptionSaved(true);
+  }, [profile.description]);
+
+  // --- Listing details: tagline, area, map pin ---------------------------------
+  const OTHER_AREA = "__other";
+  const [taglineDraft, setTaglineDraft] = useState("");
+  const [areaChoice, setAreaChoice] = useState("");
+  const [areaOther, setAreaOther] = useState("");
+  const [pinText, setPinText] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(
+    null,
+  );
+  const [savingLocation, setSavingLocation] = useState(false);
+
+  useEffect(() => {
+    setTaglineDraft(profile.tagline);
+    if (AREA_OPTIONS.includes(profile.area)) {
+      setAreaChoice(profile.area);
+      setAreaOther("");
+    } else if (profile.area) {
+      setAreaChoice(OTHER_AREA);
+      setAreaOther(profile.area);
+    } else {
+      setAreaChoice("");
+      setAreaOther("");
+    }
+    setPinText(
+      profile.latitude != null && profile.longitude != null
+        ? formatPin({ lat: profile.latitude, lng: profile.longitude })
+        : "",
+    );
+  }, [profile.tagline, profile.area, profile.latitude, profile.longitude]);
+
+  const areaValue = areaChoice === OTHER_AREA ? areaOther.trim() : areaChoice;
+  const pinResult = pinText.trim() === "" ? null : parsePinInput(pinText);
+  const pinError =
+    pinResult && !pinResult.ok
+      ? {
+          short_link:
+            "That's a short link, and we can't read the location from it. Open it in your browser and paste the full address from the address bar instead — or paste the coordinates.",
+          unrecognised:
+            "We couldn't find a location in that. Paste a Google Maps link, or coordinates like 26.4780, 80.3319.",
+          out_of_range: "Those numbers aren't a valid location on Earth.",
+          empty: "",
+        }[pinResult.reason]
+      : null;
+  const pin = pinResult && pinResult.ok ? { lat: pinResult.lat, lng: pinResult.lng } : null;
+  const pinFarFromKanpur = pin ? distanceKm(KANPUR_CENTER, pin) > 60 : false;
+
+  const savedPinMatches =
+    (pin === null && profile.latitude == null && profile.longitude == null) ||
+    (pin !== null &&
+      profile.latitude != null &&
+      profile.longitude != null &&
+      round6(profile.latitude) === pin.lat &&
+      round6(profile.longitude) === pin.lng);
+  const locationDirty =
+    taglineDraft.trim() !== profile.tagline || areaValue !== profile.area || !savedPinMatches;
+  const canSaveLocation = locationDirty && !pinError && !savingLocation;
+
+  const handleUseMyLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setLocationStatus({ kind: "error", text: "This browser can't share your location." });
+      return;
+    }
+    setLocating(true);
+    setLocationStatus(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPinText(formatPin({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        setLocationStatus({
+          kind: "error",
+          text: "Couldn't get your location. Allow location access for this site, or paste a Google Maps link instead.",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  };
+
+  const handleSaveLocation = async () => {
+    setSavingLocation(true);
+    setLocationStatus(null);
+    try {
+      await saveLocation({
+        area: areaValue,
+        tagline: taglineDraft.trim(),
+        latitude: pin ? pin.lat : null,
+        longitude: pin ? pin.lng : null,
+      });
+      setLocationStatus({ kind: "ok", text: "Saved — players see this on your venue page now." });
+    } catch (e) {
+      setLocationStatus({
+        kind: "error",
+        text: e instanceof Error ? e.message : "Could not save these details.",
+      });
+    } finally {
+      setSavingLocation(false);
+    }
+  };
 
   const handleSubmitField = async (field: "name" | "address", value: string) => {
     setSavingField(field);
@@ -172,9 +301,133 @@ function VenueProfilePage() {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Map preview isn't available in this preview &mdash; the live app pins your address on
-            the venue page.
+            Your address is shown to players as text. Set the map pin in the next section so they
+            can find you on the map.
           </p>
+        </div>
+      </div>
+
+      <div className="surface-card rounded-2xl p-5">
+        <h2 className="font-display text-base font-semibold text-foreground">
+          Listing details &amp; map pin
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Saves when you press Save. Shown on your venue page and used for search, filters and
+          distance.
+        </p>
+
+        <div className="mt-4 flex flex-col gap-4">
+          <div>
+            <TextInput
+              label="Tagline"
+              value={taglineDraft}
+              maxLength={TAGLINE_MAX}
+              placeholder="e.g. Six air-cooled wooden courts, tournament grade"
+              onChange={(e) => setTaglineDraft(e.target.value)}
+            />
+            <p className="mt-1 text-right text-[11px] text-muted-foreground">
+              {taglineDraft.length}/{TAGLINE_MAX}
+            </p>
+          </div>
+
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-semibold text-foreground">Area</span>
+              <select
+                value={areaChoice}
+                onChange={(e) => setAreaChoice(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+              >
+                <option value="">Select your neighbourhood</option>
+                {AREA_OPTIONS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+                <option value={OTHER_AREA}>Other&hellip;</option>
+              </select>
+            </label>
+            {areaChoice === OTHER_AREA && (
+              <div className="mt-2">
+                <TextInput
+                  label="Your area"
+                  value={areaOther}
+                  maxLength={60}
+                  onChange={(e) => setAreaOther(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Your venue will be listed, but it won&apos;t appear when players filter by one of
+                  the neighbourhoods above.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <TextInput
+                  label="Map pin"
+                  icon={MapPin}
+                  value={pinText}
+                  placeholder="Paste a Google Maps link or 26.4780, 80.3319"
+                  onChange={(e) => setPinText(e.target.value)}
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={handleUseMyLocation} disabled={locating}>
+                <LocateFixed className="h-4 w-4" /> {locating ? "Locating\u2026" : "Use my location"}
+              </Button>
+            </div>
+
+            {pinError && <p className="mt-1.5 text-xs text-destructive">{pinError}</p>}
+
+            {pin && (
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                <span>
+                  Pin: <strong className="text-foreground">{formatPin(pin)}</strong>
+                </span>
+                <a
+                  href={mapsLink(pin)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-primary underline underline-offset-2"
+                >
+                  Check on Google Maps <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            )}
+
+            {pinFarFromKanpur && (
+              <p className="mt-1.5 rounded-lg bg-accent/10 px-3 py-2 text-xs text-foreground">
+                This pin is far from Kanpur. Check it on Google Maps &mdash; latitude comes first
+                (Kanpur is about 26.45, 80.33).
+              </p>
+            )}
+
+            {!pinText.trim() && (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Without a pin, players won&apos;t see your venue on a map. Tip: stand at your venue
+                and tap &ldquo;Use my location&rdquo;, or in Google Maps right-click your venue and
+                click the numbers at the top to copy them.
+              </p>
+            )}
+          </div>
+
+          {locationStatus && (
+            <p
+              className={`text-sm ${
+                locationStatus.kind === "ok" ? "text-primary" : "text-destructive"
+              }`}
+            >
+              {locationStatus.text}
+            </p>
+          )}
+
+          <div>
+            <Button size="sm" disabled={!canSaveLocation} onClick={handleSaveLocation}>
+              {savingLocation ? "Saving\u2026" : locationDirty ? "Save details" : "Saved"}
+            </Button>
+          </div>
         </div>
       </div>
 

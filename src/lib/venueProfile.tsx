@@ -33,12 +33,47 @@ export const AMENITY_OPTIONS = [
   "First Aid",
 ];
 
+/** Neighbourhoods the Consumer app's area filter offers (Consumer:
+ *  src/data/landing.ts `areas`). Keep the two lists in sync — Consumer
+ *  filters venues with an exact match on this text. */
+export const AREA_OPTIONS = [
+  "Swaroop Nagar",
+  "Kakadeo",
+  "Civil Lines",
+  "Kalyanpur",
+  "Govind Nagar",
+  "Panki",
+  "Barra",
+];
+
+export const TAGLINE_MAX = 120;
+
+export type LocationInput = {
+  area: string;
+  tagline: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+const LOCATION_ERRORS: Record<string, string> = {
+  NOT_ALLOWED: "Only the venue owner can change these details.",
+  AREA_TOO_LONG: "Area name is too long (60 characters max).",
+  TAGLINE_TOO_LONG: `Tagline is too long (${TAGLINE_MAX} characters max).`,
+  LOCATION_INCOMPLETE: "The map pin needs both a latitude and a longitude.",
+  LOCATION_OUT_OF_RANGE: "That map pin isn't a valid location.",
+  VENUE_NOT_FOUND: "We couldn't find your venue. Try signing in again.",
+};
+
 export type VenueProfile = {
   name: string;
   description: string;
   address: string;
   photos: string[];
   amenities: string[];
+  area: string;
+  tagline: string;
+  latitude: number | null;
+  longitude: number | null;
   operationalStatus: "live" | "paused";
   legalBusinessName: string;
   gstNumber: string | null;
@@ -55,6 +90,7 @@ type VenueProfileContextValue = {
   addPhoto: (dataUrl: string) => void;
   removePhoto: (index: number) => void;
   reorderPhoto: (index: number, direction: -1 | 1) => void;
+  saveLocation: (input: LocationInput) => Promise<void>;
   submitMajorChange: (input: { name?: string; address?: string }) => Promise<void>;
   discardPendingChange: () => Promise<void>;
   updateBusinessDetails: (input: {
@@ -72,6 +108,10 @@ const EMPTY_PROFILE: VenueProfile = {
   address: "",
   photos: [],
   amenities: [],
+  area: "",
+  tagline: "",
+  latitude: null,
+  longitude: null,
   operationalStatus: "live",
   legalBusinessName: "",
   gstNumber: null,
@@ -85,6 +125,10 @@ type VenueRow = {
   address: string;
   photos: string[];
   amenities: string[];
+  area: string | null;
+  tagline: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
   is_active: boolean;
   legal_business_name: string | null;
   gst_number: string | null;
@@ -99,6 +143,11 @@ function mapVenueRow(row: VenueRow): VenueProfile {
     address: row.address,
     photos: row.photos ?? [],
     amenities: row.amenities ?? [],
+    area: row.area ?? "",
+    tagline: row.tagline ?? "",
+    // `numeric` columns can arrive as strings depending on the API layer.
+    latitude: row.latitude == null ? null : Number(row.latitude),
+    longitude: row.longitude == null ? null : Number(row.longitude),
     operationalStatus: row.is_active ? "live" : "paused",
     legalBusinessName: row.legal_business_name ?? "",
     gstNumber: row.gst_number,
@@ -121,7 +170,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from("venues")
       .select(
-        "name, about, address, photos, amenities, is_active, legal_business_name, gst_number, pending_name, pending_address",
+        "name, about, address, photos, amenities, area, tagline, latitude, longitude, is_active, legal_business_name, gst_number, pending_name, pending_address",
       )
       .eq("id", partner.venueId)
       .maybeSingle<VenueRow>();
@@ -202,6 +251,24 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
     [profile.photos, saveMinor],
   );
 
+  const saveLocation = useCallback(
+    async (input: LocationInput) => {
+      if (!partner) throw new Error("Not signed in.");
+      const { data, error } = await supabase.rpc("partner_save_venue_location", {
+        p_venue_id: partner.venueId,
+        p_area: input.area,
+        p_tagline: input.tagline,
+        p_latitude: input.latitude,
+        p_longitude: input.longitude,
+      });
+      if (error) {
+        throw new Error(LOCATION_ERRORS[error.message] ?? (error.message || "Could not save these details."));
+      }
+      if (data) setProfile(mapVenueRow(data as VenueRow));
+    },
+    [partner],
+  );
+
   const submitMajorChange = useCallback(
     async (input: { name?: string; address?: string }) => {
       if (!partner) throw new Error("Not signed in.");
@@ -262,6 +329,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
       addPhoto,
       removePhoto,
       reorderPhoto,
+      saveLocation,
       submitMajorChange,
       discardPendingChange,
       updateBusinessDetails,
@@ -276,6 +344,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
       addPhoto,
       removePhoto,
       reorderPhoto,
+      saveLocation,
       submitMajorChange,
       discardPendingChange,
       updateBusinessDetails,
