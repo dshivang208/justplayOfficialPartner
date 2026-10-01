@@ -130,13 +130,23 @@ type VenueRow = {
   latitude: number | string | null;
   longitude: number | string | null;
   is_active: boolean;
+};
+
+/** legal_business_name / gst_number / pending_name / pending_address are no
+ *  longer selectable on the raw `venues` table for anon/authenticated (see
+ *  migration 20260915000000_venues_private_columns.sql — they were
+ *  readable by anyone on the public internet via Consumer's old `select
+ *  *`). They're fetched separately below via partner_get_venue_private_
+ *  details, a SECURITY DEFINER RPC that checks the caller actually owns or
+ *  staffs this venue. */
+type VenuePrivateRow = {
   legal_business_name: string | null;
   gst_number: string | null;
   pending_name: string | null;
   pending_address: string | null;
 };
 
-function mapVenueRow(row: VenueRow): VenueProfile {
+function mapVenueRow(row: VenueRow, priv: VenuePrivateRow | null): VenueProfile {
   return {
     name: row.name,
     description: row.about ?? "",
@@ -149,10 +159,10 @@ function mapVenueRow(row: VenueRow): VenueProfile {
     latitude: row.latitude == null ? null : Number(row.latitude),
     longitude: row.longitude == null ? null : Number(row.longitude),
     operationalStatus: row.is_active ? "live" : "paused",
-    legalBusinessName: row.legal_business_name ?? "",
-    gstNumber: row.gst_number,
-    pendingName: row.pending_name,
-    pendingAddress: row.pending_address,
+    legalBusinessName: priv?.legal_business_name ?? "",
+    gstNumber: priv?.gst_number ?? null,
+    pendingName: priv?.pending_name ?? null,
+    pendingAddress: priv?.pending_address ?? null,
   };
 }
 
@@ -167,16 +177,20 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
-      .from("venues")
-      .select(
-        "name, about, address, photos, amenities, area, tagline, latitude, longitude, is_active, legal_business_name, gst_number, pending_name, pending_address",
-      )
-      .eq("id", partner.venueId)
-      .maybeSingle<VenueRow>();
+    const [{ data, error }, privResult] = await Promise.all([
+      supabase
+        .from("venues")
+        .select(
+          "name, about, address, photos, amenities, area, tagline, latitude, longitude, is_active",
+        )
+        .eq("id", partner.venueId)
+        .maybeSingle<VenueRow>(),
+      supabase.rpc("partner_get_venue_private_details", { p_venue_id: partner.venueId }).maybeSingle<VenuePrivateRow>(),
+    ]);
 
     if (error) console.error("fetch venue profile failed:", error.message);
-    setProfile(data ? mapVenueRow(data) : EMPTY_PROFILE);
+    if (privResult.error) console.error("fetch venue private details failed:", privResult.error.message);
+    setProfile(data ? mapVenueRow(data, privResult.data ?? null) : EMPTY_PROFILE);
     setLoading(false);
   }, [partner]);
 
@@ -264,7 +278,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
       if (error) {
         throw new Error(LOCATION_ERRORS[error.message] ?? (error.message || "Could not save these details."));
       }
-      if (data) setProfile(mapVenueRow(data as VenueRow));
+      if (data) setProfile(mapVenueRow(data as VenueRow, data as VenuePrivateRow));
     },
     [partner],
   );
@@ -278,7 +292,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
         p_address: input.address ?? null,
       });
       if (error) throw new Error(error.message || "Could not submit that change.");
-      if (data) setProfile(mapVenueRow(data as VenueRow));
+      if (data) setProfile(mapVenueRow(data as VenueRow, data as VenuePrivateRow));
     },
     [partner],
   );
@@ -289,7 +303,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
       p_venue_id: partner.venueId,
     });
     if (error) throw new Error(error.message || "Could not discard the pending change.");
-    if (data) setProfile(mapVenueRow(data as VenueRow));
+    if (data) setProfile(mapVenueRow(data as VenueRow, data as VenuePrivateRow));
   }, [partner]);
 
   const updateBusinessDetails = useCallback(
@@ -301,7 +315,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
         p_gst_number: input.gstNumber,
       });
       if (error) throw new Error(error.message || "Could not save business details.");
-      if (data) setProfile(mapVenueRow(data as VenueRow));
+      if (data) setProfile(mapVenueRow(data as VenueRow, data as VenuePrivateRow));
     },
     [partner],
   );
@@ -314,7 +328,7 @@ export function VenueProfileProvider({ children }: { children: ReactNode }) {
       p_is_active: nextActive,
     });
     if (error) throw new Error(error.message || "Could not update venue status.");
-    if (data) setProfile(mapVenueRow(data as VenueRow));
+    if (data) setProfile(mapVenueRow(data as VenueRow, data as VenuePrivateRow));
   }, [partner, profile.operationalStatus]);
 
   const reviewPending = profile.pendingName != null || profile.pendingAddress != null;
