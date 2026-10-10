@@ -79,6 +79,11 @@ export type VenueProfile = {
   gstNumber: string | null;
   pendingName: string | null;
   pendingAddress: string | null;
+  /** When the current pending request was submitted. */
+  pendingChangeRequestedAt: string | null;
+  /** Why an admin declined the last request. Cleared when a new request is
+   *  submitted or the notice is dismissed. */
+  changeRejectionReason: string | null;
 };
 
 type VenueProfileContextValue = {
@@ -117,6 +122,8 @@ const EMPTY_PROFILE: VenueProfile = {
   gstNumber: null,
   pendingName: null,
   pendingAddress: null,
+  pendingChangeRequestedAt: null,
+  changeRejectionReason: null,
 };
 
 type VenueRow = {
@@ -144,6 +151,8 @@ type VenuePrivateRow = {
   gst_number: string | null;
   pending_name: string | null;
   pending_address: string | null;
+  pending_change_requested_at: string | null;
+  pending_change_rejection_reason: string | null;
 };
 
 function mapVenueRow(row: VenueRow, priv: VenuePrivateRow | null): VenueProfile {
@@ -163,6 +172,8 @@ function mapVenueRow(row: VenueRow, priv: VenuePrivateRow | null): VenueProfile 
     gstNumber: priv?.gst_number ?? null,
     pendingName: priv?.pending_name ?? null,
     pendingAddress: priv?.pending_address ?? null,
+    pendingChangeRequestedAt: priv?.pending_change_requested_at ?? null,
+    changeRejectionReason: priv?.pending_change_rejection_reason ?? null,
   };
 }
 

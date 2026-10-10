@@ -215,6 +215,28 @@ function VenueProfilePage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {!reviewPending && profile.changeRejectionReason && (
+        <div className="flex items-start gap-3 rounded-2xl border-l-4 border-destructive bg-destructive/5 px-4 py-3.5">
+          <AlertOctagon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">Your last change request was declined</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {profile.changeRejectionReason}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Your venue is still live under its current details. You can submit a new request below.
+            </p>
+            <button
+              onClick={handleDiscard}
+              disabled={savingField === "discard"}
+              className="mt-2 text-xs font-semibold text-destructive underline underline-offset-2 disabled:opacity-50"
+            >
+              {savingField === "discard" ? "Dismissing\u2026" : "Dismiss"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {reviewPending && (
         <div className="flex items-start gap-3 rounded-2xl border-l-4 border-accent bg-accent/10 px-4 py-3.5">
           <AlertOctagon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
@@ -235,6 +257,17 @@ function VenueProfilePage() {
               )}
               Your venue stays live under its current details until this is approved &mdash; usually
               1&ndash;2 business days.
+              {profile.pendingChangeRequestedAt && (
+                <>
+                  {" "}
+                  Submitted{" "}
+                  {new Date(profile.pendingChangeRequestedAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                  .
+                </>
+              )}
             </p>
             <button
               onClick={handleDiscard}
