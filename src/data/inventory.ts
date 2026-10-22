@@ -9,12 +9,7 @@
  * to fetch; now there is, so the calendar just queries the real rows for
  * whatever date range is visible, the same way the consumer app already
  * fetches its own availability.
- *
- * `defaultCourtStubs` is the one piece kept purely for backward
- * compatibility — `lib/bookings.tsx` and `lib/payouts.tsx` (Backend Phases
- * C and D, not built yet) still use it to fabricate mock court references.
- * Once those phases go real, their court ids will come from the same
- * `courts` table this file now queries, and this function can go away.
+
  */
 import { supabase } from "@/lib/supabaseClient";
 
@@ -79,17 +74,6 @@ export const SPORT_OPTIONS = [
   "Basketball",
 ];
 
-export function defaultCourtStubs(sports: string[]): { id: string; name: string; sport: string }[] {
-  if (sports.length === 0) return [];
-  return sports.map((sport, i) => ({
-    id: `court_${i + 1}`,
-    name:
-      sports.length > 1
-        ? `${sport === "Box Cricket" ? "Cage" : "Turf"} ${i === 0 ? "A" : "B"} \u2014 ${sport}`
-        : sport,
-    sport,
-  }));
-}
 
 /* --------------------------------------------------------------------- */
 

@@ -47,6 +47,13 @@ export type CancelResult = { refunded: boolean; refundError?: string };
 type BookingsContextValue = {
   bookings: Booking[];
   loading: boolean;
+  /** False until the FIRST fetch has finished (success or failure). `loading`
+   *  starts false, so without this a screen briefly shows "no bookings" —
+   *  and, on the dashboard, zeroed KPIs — before the request even starts. */
+  hydrated: boolean;
+  /** Set when the last fetch failed, so a screen can say so instead of
+   *  presenting an empty list (or ₹0) as if it were the truth. */
+  loadError: string | null;
   getBooking: (id: string) => Booking | undefined;
   createWalkinBooking: (input: CreateWalkinBookingInput) => Promise<Booking>;
   markCompleted: (id: string) => Promise<void>;
@@ -143,6 +150,8 @@ export function BookingsProvider({ children }: { children: ReactNode }) {
   const { partner } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!partner) {
@@ -150,6 +159,7 @@ export function BookingsProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
+    setLoadError(null);
 
     const { data: rows, error } = await supabase
       .from("bookings")
@@ -162,7 +172,9 @@ export function BookingsProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error("fetch bookings failed:", error.message);
       setBookings([]);
+      setLoadError(error.message);
       setLoading(false);
+      setHydrated(true);
       return;
     }
 
@@ -178,6 +190,7 @@ export function BookingsProvider({ children }: { children: ReactNode }) {
 
     setBookings((rows ?? []).map((r) => mapRow(r, flagRows ?? [])));
     setLoading(false);
+    setHydrated(true);
   }, [partner]);
 
   useEffect(() => {
@@ -283,6 +296,8 @@ export function BookingsProvider({ children }: { children: ReactNode }) {
     () => ({
       bookings,
       loading,
+      hydrated,
+      loadError,
       getBooking,
       createWalkinBooking,
       markCompleted,
@@ -296,6 +311,8 @@ export function BookingsProvider({ children }: { children: ReactNode }) {
     [
       bookings,
       loading,
+      hydrated,
+      loadError,
       getBooking,
       createWalkinBooking,
       markCompleted,

@@ -5,7 +5,9 @@ import { useAuth } from "@/lib/auth";
 import { useBookings } from "@/lib/bookings";
 import { usePayouts } from "@/lib/payouts";
 import { buildDashboardAlerts } from "@/lib/alerts";
-import { STATIC_ALERTS, STATS_ACTIVE, STATS_EMPTY, formatINR } from "@/data/dashboard";
+import { computeDashboardStats } from "@/lib/dashboardStats";
+import { useOccupancy } from "@/lib/useOccupancy";
+import { formatINR } from "@/data/dashboard";
 import {
   AlertRow,
   BookingsTable,
@@ -18,23 +20,37 @@ export const Route = createFileRoute("/dashboard/")({
   component: DashboardOverviewPage,
 });
 
+/** StatCard only wants a `delta` prop when there is one to show. */
+const withDelta = (d: number | undefined) => (d === undefined ? {} : { delta: d });
+
+function greetingFor(now: Date) {
+  const h = now.getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
 function DashboardOverviewPage() {
   const { partner } = useAuth();
-  const { bookings: allBookings } = useBookings();
+  const { bookings: allBookings, hydrated, loadError, refresh } = useBookings();
   const { pendingDeductions, pendingNet } = usePayouts();
-  const [loading, setLoading] = useState(true);
+  const { occupancy, error: occupancyError } = useOccupancy(
+    partner?.venueId ?? null,
+    allBookings.length,
+  );
 
+  // Ticks once a minute so "next: 6:00 PM" and the greeting move on by
+  // themselves instead of freezing at whatever time the page was opened.
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(t);
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   const todayDate = useMemo(
-    () =>
-      new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }),
-    [],
+    () => now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }),
+    [now],
   );
+
+  const stats = useMemo(() => computeDashboardStats(allBookings, now), [allBookings, now]);
 
   const recentBookings = useMemo(
     () => [...allBookings].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 7),
@@ -42,21 +58,19 @@ function DashboardOverviewPage() {
   );
 
   if (!partner) return null;
+  // Real loading state — not a fixed delay, and no zeroed KPIs flashing
+  // before the first request has even been sent.
+  if (!hydrated) return <SkeletonDashboard />;
 
-  // A brand-new partner (just approved, no bookings recorded yet) sees the
-  // empty state; an established partner sees the populated demo data.
-  // Real data replaces both once the backend lands.
   const isNewPartner = partner.sports.length === 0;
-  const stats = isNewPartner ? STATS_EMPTY : STATS_ACTIVE;
+  const alerts = buildDashboardAlerts({ bookings: allBookings, pendingDeductions, pendingNet });
 
-  const dynamicAlerts = buildDashboardAlerts({
-    bookings: allBookings,
-    pendingDeductions,
-    pendingNet,
-  });
-  const alerts = isNewPartner ? [] : [...dynamicAlerts, ...STATIC_ALERTS];
-
-  if (loading) return <SkeletonDashboard />;
+  // If the bookings request failed, an empty list would read as "no bookings"
+  // and "₹0" — wrong, and worse than saying nothing. Show a dash instead.
+  const bookingsOk = loadError === null;
+  const dash = "\u2014";
+  const occupancyValue =
+    occupancyError || !occupancy || occupancy.rate === null ? dash : `${occupancy.rate}%`;
 
   return (
     <div>
@@ -65,7 +79,7 @@ function DashboardOverviewPage() {
           <h1 className="font-display text-2xl font-semibold leading-tight text-foreground sm:text-[28px]">
             {isNewPartner
               ? `Welcome, ${partner.ownerName.split(" ")[0]}`
-              : `Good afternoon, ${partner.ownerName.split(" ")[0]}`}
+              : `${greetingFor(now)}, ${partner.ownerName.split(" ")[0]}`}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {partner.venueName} &middot; {todayDate}
@@ -79,38 +93,57 @@ function DashboardOverviewPage() {
               Today
             </p>
             <p className="text-sm font-semibold text-foreground">
-              {stats.todayBookingsCount > 0
-                ? `${stats.todayBookingsCount} booking${stats.todayBookingsCount === 1 ? "" : "s"} \u00b7 next: ${stats.nextSlotLabel}`
-                : "No bookings today yet"}
+              {!bookingsOk
+                ? "Couldn't load today's bookings"
+                : stats.todayBookingsCount === 0
+                  ? "No bookings today yet"
+                  : `${stats.todayBookingsCount} booking${stats.todayBookingsCount === 1 ? "" : "s"}${
+                      stats.nextSlotLabel ? ` \u00b7 next: ${stats.nextSlotLabel}` : " \u00b7 none left today"
+                    }`}
             </p>
           </div>
         </div>
       </div>
 
+      {!bookingsOk && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-l-4 border-destructive bg-destructive/5 px-4 py-3">
+          <p className="text-sm text-foreground">
+            We couldn&apos;t load your bookings, so the numbers below aren&apos;t shown rather than
+            risk showing wrong ones.
+          </p>
+          <button
+            onClick={() => void refresh()}
+            className="text-sm font-semibold text-primary underline underline-offset-2"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           icon={CalendarCheck}
-          label="Bookings this week"
-          value={stats.bookingsThisWeek}
-          delta={stats.bookingsThisWeekDelta}
+          label="Bookings · last 7 days"
+          value={bookingsOk ? stats.bookingsLast7Days : dash}
+          {...withDelta(bookingsOk ? stats.bookingsDelta : undefined)}
         />
         <StatCard
           icon={IndianRupee}
-          label="Revenue this week"
-          value={`\u20B9${stats.revenueThisWeek.toLocaleString("en-IN")}`}
-          delta={stats.revenueThisWeekDelta}
+          label="Revenue · last 7 days"
+          value={bookingsOk ? formatINR(stats.revenueLast7Days) : dash}
+          {...withDelta(bookingsOk ? stats.revenueDelta : undefined)}
           tone="accent"
         />
         <StatCard
           icon={Percent}
-          label="Occupancy rate"
-          value={`${stats.occupancyRate}%`}
-          delta={stats.occupancyRateDelta}
+          label="Occupancy · last 7 days"
+          value={occupancyValue}
+          {...withDelta(occupancy?.delta)}
         />
         <StatCard
           icon={Clock}
           label="Bookings today"
-          value={stats.todayBookingsCount}
+          value={bookingsOk ? stats.todayBookingsCount : dash}
           tone="accent"
         />
       </div>
@@ -143,7 +176,7 @@ function DashboardOverviewPage() {
           )}
         </div>
         <div className="mt-3">
-          <BookingsTable bookings={isNewPartner ? [] : recentBookings} />
+          <BookingsTable bookings={recentBookings} />
         </div>
       </div>
     </div>

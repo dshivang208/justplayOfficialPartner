@@ -4,13 +4,10 @@
  * (DashboardShell) can never drift out of sync by each recomputing it
  * slightly differently.
  *
- * Deliberately only the REAL, backend-derived alerts (pending payment
- * collection, a refund clawback, the next scheduled payout) — not
- * `STATIC_ALERTS` from `data/dashboard.ts`, which is tied to the still-
- * mock KPI stats (out of scope for this pass, see the Phase E brief's
- * "no analytics dashboards beyond Phase 1" note) and would make the bell
- * permanently show a fake unread notification regardless of anything a
- * partner has actually done.
+ * Every alert here is derived from the partner's real data (pending
+ * payment collection, a refund clawback, the next scheduled payout).
+ * There are no hardcoded/example alerts anywhere — if nothing needs
+ * attention, the list is genuinely empty.
  */
 import type { Booking } from "@/data/bookings";
 import { formatBookingId } from "@/data/bookings";
