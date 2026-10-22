@@ -8,6 +8,7 @@ import {
   ListChecks,
   BookOpen,
   Wallet,
+  MessagesSquare,
   Settings,
   LogOut,
   Menu,
@@ -22,7 +23,7 @@ import { useBookings } from "@/lib/bookings";
 import { usePayouts } from "@/lib/payouts";
 import { buildDashboardAlerts } from "@/lib/alerts";
 
-export type NavKey = "dashboard" | "slots" | "bookings" | "payouts" | "settings";
+export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "settings";
 
 export const NAV_ITEMS: {
   key: NavKey;
@@ -57,6 +58,14 @@ export const NAV_ITEMS: {
     icon: BookOpen,
     live: true,
     ownerOnly: false,
+  },
+  {
+    key: "community",
+    label: "Community",
+    to: "/dashboard/community",
+    icon: MessagesSquare,
+    live: true,
+    ownerOnly: true,
   },
   {
     key: "payouts",
