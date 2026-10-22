@@ -142,7 +142,7 @@ function mapRow(row: BookingRow, flags: FlagRow[]): Booking {
 const SELECT_COLUMNS = `
   id, slot_id, sport, date, price_paid, status, cancellation_reason,
   walkin_customer_name, walkin_customer_phone, source, payment_method, payment_status, notes, created_at,
-  slots(court_id, start_time, end_time, courts(name)),
+  slots!bookings_slot_id_fkey(court_id, start_time, end_time, courts(name)),
   users(name, phone)
 `;
 
