@@ -283,7 +283,7 @@ function CalendarPage() {
                 {pendingSelection.length} slot{pendingSelection.length > 1 ? "s" : ""} selected
               </p>
               <p className="text-xs text-muted-foreground">
-                \u20b9{pendingTotal.toLocaleString("en-IN")} total
+                ₹{pendingTotal.toLocaleString("en-IN")} total
               </p>
             </div>
             <button
