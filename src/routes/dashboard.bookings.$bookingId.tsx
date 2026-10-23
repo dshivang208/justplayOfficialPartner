@@ -27,6 +27,7 @@ import { BookingStatusBadge, PaymentStatusBadge } from "@/components/partner/Boo
 import { Button } from "@/components/partner/Button";
 import { Modal } from "@/components/partner/Modal";
 import { TextInput } from "@/components/partner/FormFields";
+import { InvoiceDetailsCard } from "@/components/partner/InvoiceDetailsCard";
 
 export const Route = createFileRoute("/dashboard/bookings/$bookingId")({
   head: () => ({ meta: [{ title: "Booking details | JustPlay Partner" }] }),
@@ -162,6 +163,8 @@ function BookingDetailPage() {
           />
         </div>
       </div>
+
+      <InvoiceDetailsCard bookingId={booking.id} />
 
       <div className="surface-card mt-4 rounded-2xl p-5">
         <h2 className="font-display text-base font-semibold text-foreground">Booking details</h2>
