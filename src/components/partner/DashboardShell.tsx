@@ -26,7 +26,7 @@ import { buildDashboardAlerts } from "@/lib/alerts";
 import { usePartnerNotifications } from "@/lib/partnerNotifications";
 import { NotificationPanel } from "./NotificationPanel";
 
-export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "support" | "settings";
+export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "notifications" | "support" | "settings";
 
 export const NAV_ITEMS: {
   key: NavKey;
@@ -79,6 +79,14 @@ export const NAV_ITEMS: {
     ownerOnly: true,
   },
   {
+    key: "notifications",
+    label: "Notifications",
+    to: "/dashboard/notifications",
+    icon: Bell,
+    live: true,
+    ownerOnly: false,
+  },
+  {
     key: "support",
     label: "Support",
     to: "/dashboard/support",
@@ -106,6 +114,7 @@ function NavButton({
   onClick?: () => void;
 }) {
   const Icon = item.icon;
+  const { unreadCount: unread } = usePartnerNotifications();
   return (
     <Link
       to={item.to}
@@ -118,6 +127,11 @@ function NavButton({
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className="flex-1">{item.label}</span>
+      {item.key === "notifications" && unread > 0 && (
+        <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground">
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
       {!item.live && (
         <span className="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           {item.phase}
