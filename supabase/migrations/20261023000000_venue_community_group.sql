@@ -193,7 +193,9 @@ as $$
 declare
   v_ok boolean := false;
 begin
-  if coalesce(auth.role(), '') = 'service_role' or current_user in ('postgres', 'service_role') then
+  -- NOTE: never test current_user here. Inside a SECURITY DEFINER function it
+  -- is always the function owner (postgres), which would let EVERY caller in.
+  if coalesce(auth.role(), '') = 'service_role' then
     return;
   end if;
   if to_regprocedure('public.is_admin()') is not null then

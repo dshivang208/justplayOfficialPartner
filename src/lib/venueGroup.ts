@@ -18,6 +18,9 @@ export type VenueGroup = {
   name: string;
   description: string;
   isActive: boolean;
+  /** False = announcements only (members can read but not post). Defaults to
+   *  false until the two-way chat migration is applied. */
+  membersCanPost: boolean;
   createdAt: string;
 };
 
@@ -25,6 +28,9 @@ export type VenueGroupMessage = {
   id: string;
   body: string;
   createdAt: string;
+  /** "venue" = posted from this console; "member" = a player. */
+  kind: "venue" | "member";
+  senderName: string;
 };
 
 type GroupRow = {
@@ -32,23 +38,36 @@ type GroupRow = {
   name: string;
   description: string | null;
   is_active: boolean;
+  members_can_post?: boolean;
   created_at: string;
 };
 
-type MessageRow = { id: string; body: string; created_at: string };
+type MessageRow = {
+  id: string;
+  body: string;
+  created_at: string;
+  sender_user_id?: string | null;
+  sender_kind?: "venue" | "member";
+};
 
 const toGroup = (r: GroupRow): VenueGroup => ({
   id: r.id,
   name: r.name,
   description: r.description ?? "",
   isActive: r.is_active,
+  membersCanPost: r.members_can_post ?? false,
   createdAt: r.created_at,
 });
 
-const toMessage = (r: MessageRow): VenueGroupMessage => ({
+const toMessage = (r: MessageRow, names: Record<string, string> = {}): VenueGroupMessage => ({
   id: r.id,
   body: r.body,
   createdAt: r.created_at,
+  kind: r.sender_kind ?? "venue",
+  senderName:
+    (r.sender_kind ?? "venue") === "venue"
+      ? "You"
+      : ((r.sender_user_id ? names[r.sender_user_id] : undefined) ?? "Member"),
 });
 
 const ERROR_COPY: Record<string, string> = {
@@ -60,7 +79,7 @@ const ERROR_COPY: Record<string, string> = {
   GROUP_PAUSED: "The group is paused. Resume it to post updates.",
   NAME_REQUIRED: "Give the group a name (at least 2 characters).",
   MESSAGE_REQUIRED: "Write something to send.",
-  MESSAGE_TOO_LONG: "Updates can be up to 1000 characters.",
+  MESSAGE_TOO_LONG: "Messages can be up to 1000 characters.",
   AUTH_REQUIRED: "Please sign in again.",
 };
 
@@ -80,17 +99,40 @@ export function useVenueGroup() {
   const [messages, setMessages] = useState<VenueGroupMessage[]>([]);
 
   const fetchMessages = useCallback(async (groupId: string) => {
-    const { data, error } = await supabase
+    let rows: MessageRow[];
+    const full = await supabase
       .from("venue_group_messages")
-      .select("id, body, created_at")
+      .select("id, body, created_at, sender_user_id, sender_kind")
       .eq("group_id", groupId)
       .order("created_at", { ascending: true })
-      .limit(300);
-    if (error) {
-      console.error("fetch venue group messages failed:", error.message);
-      return;
+      .limit(300)
+      .returns<MessageRow[]>();
+    if (full.error) {
+      // Two-way chat migration not applied yet — original columns only.
+      const legacy = await supabase
+        .from("venue_group_messages")
+        .select("id, body, created_at")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: true })
+        .limit(300);
+      if (legacy.error) {
+        console.error("fetch venue group messages failed:", legacy.error.message);
+        return;
+      }
+      rows = (legacy.data ?? []) as MessageRow[];
+    } else {
+      rows = full.data ?? [];
     }
-    setMessages(((data ?? []) as MessageRow[]).map(toMessage));
+
+    const ids = Array.from(
+      new Set(rows.map((r) => r.sender_user_id).filter((id): id is string => Boolean(id))),
+    );
+    const names: Record<string, string> = {};
+    if (ids.length > 0) {
+      const { data } = await supabase.from("public_profiles").select("id, name").in("id", ids);
+      for (const p of data ?? []) names[p.id] = p.name || "Player";
+    }
+    setMessages(rows.map((r) => toMessage(r, names)));
   }, []);
 
   const fetchMemberCount = useCallback(async (groupId: string) => {
@@ -108,14 +150,22 @@ export function useVenueGroup() {
   const refresh = useCallback(async () => {
     if (!venueId) return;
 
-    const [accessRes, groupRes] = await Promise.all([
+    const [accessRes, groupResFull] = await Promise.all([
       supabase.from("venue_group_access").select("enabled").eq("venue_id", venueId).maybeSingle(),
       supabase
         .from("venue_groups")
-        .select("id, name, description, is_active, created_at")
+        .select("id, name, description, is_active, members_can_post, created_at")
         .eq("venue_id", venueId)
         .maybeSingle(),
     ]);
+    // Two-way chat migration not applied yet → that column doesn't exist; retry without it.
+    const groupRes = groupResFull.error
+      ? await supabase
+          .from("venue_groups")
+          .select("id, name, description, is_active, created_at")
+          .eq("venue_id", venueId)
+          .maybeSingle()
+      : groupResFull;
 
     if (accessRes.error) console.error("fetch group access failed:", accessRes.error.message);
     if (groupRes.error) console.error("fetch venue group failed:", groupRes.error.message);
@@ -207,6 +257,26 @@ export function useVenueGroup() {
     [group, refresh],
   );
 
+  const setMembersCanPost = useCallback(
+    async (allowed: boolean) => {
+      if (!group) return;
+      const { error } = await supabase.rpc("partner_set_venue_group_members_can_post", {
+        p_group_id: group.id,
+        p_allowed: allowed,
+      });
+      if (error) {
+        if (error.code === "PGRST202" || /could not find the function/i.test(error.message)) {
+          throw new Error(
+            "Two-way chat isn't enabled yet. Apply the latest database update first.",
+          );
+        }
+        throw friendly(error.message);
+      }
+      await refresh();
+    },
+    [group, refresh],
+  );
+
   const deleteGroup = useCallback(async () => {
     if (!group) return;
     const { error } = await supabase.rpc("partner_delete_venue_group", { p_group_id: group.id });
@@ -249,6 +319,7 @@ export function useVenueGroup() {
     createGroup,
     updateGroup,
     setActive,
+    setMembersCanPost,
     deleteGroup,
     sendMessage,
     deleteMessage,

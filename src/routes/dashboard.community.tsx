@@ -29,8 +29,8 @@ function CommunityPage() {
         Community
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Open a group for {partner?.venueName ?? "your venue"} so players can follow it and get your
-        updates — offers, closures, tournaments. Entirely optional.
+        Open a group for {partner?.venueName ?? "your venue"} so players can follow it, chat with
+        you and each other, and get your updates — offers, closures, tournaments. Entirely optional.
       </p>
 
       <div className="mt-6">
@@ -101,7 +101,8 @@ function CreateGroupCard({
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         It appears only on your venue&apos;s page in the JustPlay app. Players join with one tap and
-        read your updates; only you can post. You can pause or delete it any time.
+        can chat with you and each other. You can switch it to announcements-only, pause it, or
+        delete it any time.
       </p>
 
       <div className="mt-5 flex flex-col gap-4">
@@ -218,6 +219,26 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
           </p>
         )}
 
+        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-secondary/60 px-3 py-2.5">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-[var(--color-primary,#15803d)]"
+            checked={group.membersCanPost}
+            disabled={busy}
+            onChange={(e) => run(() => vg.setMembersCanPost(e.target.checked))}
+          />
+          <span className="text-xs">
+            <span className="block text-sm font-semibold text-foreground">
+              Members can send messages
+            </span>
+            <span className="text-muted-foreground">
+              {group.membersCanPost
+                ? "Two-way chat. Turn off for announcements only."
+                : "Announcements only — members can read but not post."}
+            </span>
+          </span>
+        </label>
+
         <div className="mt-5 flex flex-col gap-2">
           <Button
             variant="outline"
@@ -264,43 +285,74 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
       {/* Updates feed + composer */}
       <div className="surface-card flex h-[34rem] flex-col overflow-hidden rounded-2xl">
         <div className="border-b border-border px-4 py-3">
-          <h3 className="font-display text-sm font-semibold text-foreground">Updates</h3>
+          <h3 className="font-display text-sm font-semibold text-foreground">Group chat</h3>
           <p className="text-xs text-muted-foreground">
-            Members see these in a read-only feed on your venue page.
+            {group.membersCanPost
+              ? "Two-way chat — members and you can both post. Hover a message to delete it."
+              : "Announcements only — members can read your updates but not reply."}
           </p>
         </div>
 
         <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-4">
           {messages.length === 0 ? (
             <p className="pt-10 text-center text-sm text-muted-foreground">
-              No updates yet. Post your first one below — a welcome note works well.
+              No messages yet. Post your first one below — a welcome note works well.
             </p>
           ) : (
-            messages.map((m) => (
-              <div key={m.id} className="group flex flex-col items-end">
-                <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground">
-                  {m.body}
+            messages.map((m, i) => {
+              const mine = m.kind === "venue";
+              const showDay =
+                i === 0 ||
+                new Date(messages[i - 1]!.createdAt).toDateString() !==
+                  new Date(m.createdAt).toDateString();
+              return (
+                <div key={m.id} className="space-y-3">
+                  {showDay ? (
+                    <div className="flex justify-center">
+                      <span className="rounded-full bg-secondary px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {new Date(m.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className={`group flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                    {!mine ? (
+                      <span className="mb-0.5 text-[11px] font-semibold text-muted-foreground">
+                        {m.senderName}
+                      </span>
+                    ) : null}
+                    <div
+                      className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm ${
+                        mine
+                          ? "rounded-tr-sm bg-primary text-primary-foreground"
+                          : "rounded-tl-sm bg-secondary text-foreground"
+                      }`}
+                    >
+                      {m.body}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span>
+                        {new Date(m.createdAt).toLocaleTimeString("en-IN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Delete message"
+                        className="opacity-0 transition-opacity hover:text-destructive focus:opacity-100 group-hover:opacity-100"
+                        onClick={() => run(() => vg.deleteMessage(m.id))}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span>
-                    {new Date(m.createdAt).toLocaleString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Delete update"
-                    className="opacity-0 transition-opacity hover:text-destructive focus:opacity-100 group-hover:opacity-100"
-                    onClick={() => run(() => vg.deleteMessage(m.id))}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -319,21 +371,21 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
                     void send();
                   }
                 }}
-                placeholder="Share an update with your members…"
+                placeholder="Message your members…"
                 className="min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
               />
               <Button
                 size="icon"
                 onClick={send}
                 disabled={!draft.trim() || sending}
-                aria-label="Send update"
+                aria-label="Send message"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
           ) : (
             <p className="text-center text-xs text-muted-foreground">
-              Resume the group to post updates.
+              Resume the group to post messages.
             </p>
           )}
           {group.isActive ? (
