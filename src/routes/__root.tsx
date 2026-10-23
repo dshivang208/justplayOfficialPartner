@@ -15,6 +15,7 @@ import { PartnerAuthProvider } from "../lib/auth";
 import { InventoryProvider } from "../lib/inventory";
 import { BookingsProvider } from "../lib/bookings";
 import { PayoutsProvider } from "../lib/payouts";
+import { PartnerNotificationsProvider } from "../lib/partnerNotifications";
 import { VenueProfileProvider } from "../lib/venueProfile";
 import { StaffProvider } from "../lib/staff";
 import { NotificationPrefsProvider } from "../lib/notifications";
@@ -144,8 +145,10 @@ function RootComponent() {
               <VenueProfileProvider>
                 <StaffProvider>
                   <NotificationPrefsProvider>
-                    {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-                    <Outlet />
+                    <PartnerNotificationsProvider>
+                      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+                      <Outlet />
+                    </PartnerNotificationsProvider>
                   </NotificationPrefsProvider>
                 </StaffProvider>
               </VenueProfileProvider>

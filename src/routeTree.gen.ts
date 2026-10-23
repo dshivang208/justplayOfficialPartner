@@ -15,6 +15,7 @@ import { Route as PendingRouteImport } from './routes/pending'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardBookingsRouteImport } from './routes/dashboard.bookings'
 import { Route as DashboardCommunityRouteImport } from './routes/dashboard.community'
+import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as DashboardPayoutsRouteImport } from './routes/dashboard.payouts'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardSlotsRouteImport } from './routes/dashboard.slots'
@@ -61,6 +62,11 @@ const DashboardBookingsRoute = DashboardBookingsRouteImport.update({
 const DashboardCommunityRoute = DashboardCommunityRouteImport.update({
   id: '/community',
   path: '/community',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardPayoutsRoute = DashboardPayoutsRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/pending': typeof PendingRoute
   '/dashboard/bookings': typeof DashboardBookingsRouteWithChildren
   '/dashboard/community': typeof DashboardCommunityRoute
+  '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/payouts': typeof DashboardPayoutsRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRouteWithChildren
   '/dashboard/slots': typeof DashboardSlotsRouteWithChildren
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/pending': typeof PendingRoute
   '/dashboard/community': typeof DashboardCommunityRoute
+  '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/bookings/$bookingId': typeof DashboardBookingsBookingIdRoute
   '/dashboard/payouts/history': typeof DashboardPayoutsHistoryRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/pending': typeof PendingRoute
   '/dashboard/bookings': typeof DashboardBookingsRouteWithChildren
   '/dashboard/community': typeof DashboardCommunityRoute
+  '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/payouts': typeof DashboardPayoutsRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRouteWithChildren
   '/dashboard/slots': typeof DashboardSlotsRouteWithChildren
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/pending'
     | '/dashboard/bookings'
     | '/dashboard/community'
+    | '/dashboard/notifications'
     | '/dashboard/payouts'
     | '/dashboard/settings'
     | '/dashboard/slots'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/'
     | '/pending'
     | '/dashboard/community'
+    | '/dashboard/notifications'
     | '/dashboard'
     | '/dashboard/bookings/$bookingId'
     | '/dashboard/payouts/history'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/pending'
     | '/dashboard/bookings'
     | '/dashboard/community'
+    | '/dashboard/notifications'
     | '/dashboard/payouts'
     | '/dashboard/settings'
     | '/dashboard/slots'
@@ -346,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/community'
       fullPath: '/dashboard/community'
       preLoaderRoute: typeof DashboardCommunityRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/notifications': {
+      id: '/dashboard/notifications'
+      path: '/notifications'
+      fullPath: '/dashboard/notifications'
+      preLoaderRoute: typeof DashboardNotificationsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/payouts': {
@@ -534,6 +553,7 @@ const DashboardSlotsRouteWithChildren = DashboardSlotsRoute._addFileChildren(
 interface DashboardRouteChildren {
   DashboardBookingsRoute: typeof DashboardBookingsRouteWithChildren
   DashboardCommunityRoute: typeof DashboardCommunityRoute
+  DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardPayoutsRoute: typeof DashboardPayoutsRouteWithChildren
   DashboardSettingsRoute: typeof DashboardSettingsRouteWithChildren
   DashboardSlotsRoute: typeof DashboardSlotsRouteWithChildren
@@ -545,6 +565,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardBookingsRoute: DashboardBookingsRouteWithChildren,
   DashboardCommunityRoute: DashboardCommunityRoute,
+  DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardPayoutsRoute: DashboardPayoutsRouteWithChildren,
   DashboardSettingsRoute: DashboardSettingsRouteWithChildren,
   DashboardSlotsRoute: DashboardSlotsRouteWithChildren,

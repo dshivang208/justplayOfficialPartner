@@ -23,6 +23,8 @@ import { useAuth } from "@/lib/auth";
 import { useBookings } from "@/lib/bookings";
 import { usePayouts } from "@/lib/payouts";
 import { buildDashboardAlerts } from "@/lib/alerts";
+import { usePartnerNotifications } from "@/lib/partnerNotifications";
+import { NotificationPanel } from "./NotificationPanel";
 
 export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "support" | "settings";
 
@@ -129,6 +131,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { partner, logout } = useAuth();
   const { bookings } = useBookings();
   const { pendingDeductions, pendingNet } = usePayouts();
+  const { unreadCount } = usePartnerNotifications();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -238,32 +241,43 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   setProfileOpen(false);
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface"
-                aria-label={alerts.length > 0 ? `${alerts.length} notifications` : "Notifications"}
+                aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
               >
                 <Bell className="h-4 w-4 text-muted-foreground" />
-                {alerts.length > 0 && (
-                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
                 )}
               </button>
               {notificationsOpen && (
-                <div className="absolute right-0 top-11 w-[22rem] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-                  <div className="border-b border-border px-3.5 py-2.5">
-                    <p className="text-sm font-semibold text-foreground">Notifications</p>
-                  </div>
-                  {alerts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-                      <Bell className="h-5 w-5 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Nothing needs your attention.</p>
-                    </div>
-                  ) : (
-                    <div className="flex max-h-80 flex-col gap-2 overflow-y-auto p-2.5">
-                      {alerts.map((a) => (
-                        <div key={a.id} onClick={() => setNotificationsOpen(false)}>
-                          <AlertRow alert={a} />
+                <div className="absolute right-0 top-11 w-[24rem] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+                  <NotificationPanel
+                    onNavigate={() => setNotificationsOpen(false)}
+                    header={
+                      alerts.length > 0 ? (
+                        <div className="border-b border-border bg-surface-raised/50 p-2.5">
+                          <p className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Needs your attention
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {alerts.map((a) => (
+                              <div key={a.id} onClick={() => setNotificationsOpen(false)}>
+                                <AlertRow alert={a} />
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ) : null
+                    }
+                  />
+                  <Link
+                    to="/dashboard/notifications"
+                    onClick={() => setNotificationsOpen(false)}
+                    className="block border-t border-border px-4 py-2.5 text-center text-xs font-semibold text-primary hover:bg-secondary/60"
+                  >
+                    View all notifications
+                  </Link>
                 </div>
               )}
             </div>
