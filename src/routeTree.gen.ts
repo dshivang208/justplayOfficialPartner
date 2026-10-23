@@ -30,6 +30,8 @@ import { Route as DashboardSettingsStaffRouteImport } from './routes/dashboard.s
 import { Route as DashboardSlotsIndexRouteImport } from './routes/dashboard.slots.index'
 import { Route as DashboardSlotsCourtsRouteImport } from './routes/dashboard.slots.courts'
 import { Route as DashboardSlotsSetupRouteImport } from './routes/dashboard.slots.setup'
+import { Route as DashboardSupportIndexRouteImport } from './routes/dashboard.support.index'
+import { Route as DashboardSupportTicketIdRouteImport } from './routes/dashboard.support.$ticketId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -140,6 +142,17 @@ const DashboardSlotsSetupRoute = DashboardSlotsSetupRouteImport.update({
   path: '/setup',
   getParentRoute: () => DashboardSlotsRoute,
 } as any)
+const DashboardSupportIndexRoute = DashboardSupportIndexRouteImport.update({
+  id: '/support/',
+  path: '/support/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSupportTicketIdRoute =
+  DashboardSupportTicketIdRouteImport.update({
+    id: '/support/$ticketId',
+    path: '/support/$ticketId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -159,10 +172,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings/staff': typeof DashboardSettingsStaffRoute
   '/dashboard/slots/courts': typeof DashboardSlotsCourtsRoute
   '/dashboard/slots/setup': typeof DashboardSlotsSetupRoute
+  '/dashboard/support/$ticketId': typeof DashboardSupportTicketIdRoute
   '/dashboard/bookings/': typeof DashboardBookingsIndexRoute
   '/dashboard/payouts/': typeof DashboardPayoutsIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/slots/': typeof DashboardSlotsIndexRoute
+  '/dashboard/support/': typeof DashboardSupportIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -177,10 +192,12 @@ export interface FileRoutesByTo {
   '/dashboard/settings/staff': typeof DashboardSettingsStaffRoute
   '/dashboard/slots/courts': typeof DashboardSlotsCourtsRoute
   '/dashboard/slots/setup': typeof DashboardSlotsSetupRoute
+  '/dashboard/support/$ticketId': typeof DashboardSupportTicketIdRoute
   '/dashboard/bookings': typeof DashboardBookingsIndexRoute
   '/dashboard/payouts': typeof DashboardPayoutsIndexRoute
   '/dashboard/settings': typeof DashboardSettingsIndexRoute
   '/dashboard/slots': typeof DashboardSlotsIndexRoute
+  '/dashboard/support': typeof DashboardSupportIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -201,10 +218,12 @@ export interface FileRoutesById {
   '/dashboard/settings/staff': typeof DashboardSettingsStaffRoute
   '/dashboard/slots/courts': typeof DashboardSlotsCourtsRoute
   '/dashboard/slots/setup': typeof DashboardSlotsSetupRoute
+  '/dashboard/support/$ticketId': typeof DashboardSupportTicketIdRoute
   '/dashboard/bookings/': typeof DashboardBookingsIndexRoute
   '/dashboard/payouts/': typeof DashboardPayoutsIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/slots/': typeof DashboardSlotsIndexRoute
+  '/dashboard/support/': typeof DashboardSupportIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -226,10 +245,12 @@ export interface FileRouteTypes {
     | '/dashboard/settings/staff'
     | '/dashboard/slots/courts'
     | '/dashboard/slots/setup'
+    | '/dashboard/support/$ticketId'
     | '/dashboard/bookings/'
     | '/dashboard/payouts/'
     | '/dashboard/settings/'
     | '/dashboard/slots/'
+    | '/dashboard/support/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -244,10 +265,12 @@ export interface FileRouteTypes {
     | '/dashboard/settings/staff'
     | '/dashboard/slots/courts'
     | '/dashboard/slots/setup'
+    | '/dashboard/support/$ticketId'
     | '/dashboard/bookings'
     | '/dashboard/payouts'
     | '/dashboard/settings'
     | '/dashboard/slots'
+    | '/dashboard/support'
   id:
     | '__root__'
     | '/'
@@ -267,10 +290,12 @@ export interface FileRouteTypes {
     | '/dashboard/settings/staff'
     | '/dashboard/slots/courts'
     | '/dashboard/slots/setup'
+    | '/dashboard/support/$ticketId'
     | '/dashboard/bookings/'
     | '/dashboard/payouts/'
     | '/dashboard/settings/'
     | '/dashboard/slots/'
+    | '/dashboard/support/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -428,6 +453,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSlotsSetupRouteImport
       parentRoute: typeof DashboardSlotsRoute
     }
+    '/dashboard/support/': {
+      id: '/dashboard/support/'
+      path: '/support'
+      fullPath: '/dashboard/support/'
+      preLoaderRoute: typeof DashboardSupportIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/support/$ticketId': {
+      id: '/dashboard/support/$ticketId'
+      path: '/support/$ticketId'
+      fullPath: '/dashboard/support/$ticketId'
+      preLoaderRoute: typeof DashboardSupportTicketIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
@@ -499,6 +538,8 @@ interface DashboardRouteChildren {
   DashboardSettingsRoute: typeof DashboardSettingsRouteWithChildren
   DashboardSlotsRoute: typeof DashboardSlotsRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardSupportTicketIdRoute: typeof DashboardSupportTicketIdRoute
+  DashboardSupportIndexRoute: typeof DashboardSupportIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -508,6 +549,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardSettingsRoute: DashboardSettingsRouteWithChildren,
   DashboardSlotsRoute: DashboardSlotsRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardSupportTicketIdRoute: DashboardSupportTicketIdRoute,
+  DashboardSupportIndexRoute: DashboardSupportIndexRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

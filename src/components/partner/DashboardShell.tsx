@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "./Logo";
@@ -23,7 +24,7 @@ import { useBookings } from "@/lib/bookings";
 import { usePayouts } from "@/lib/payouts";
 import { buildDashboardAlerts } from "@/lib/alerts";
 
-export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "settings";
+export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "support" | "settings";
 
 export const NAV_ITEMS: {
   key: NavKey;
@@ -74,6 +75,14 @@ export const NAV_ITEMS: {
     icon: Wallet,
     live: true,
     ownerOnly: true,
+  },
+  {
+    key: "support",
+    label: "Support",
+    to: "/dashboard/support",
+    icon: LifeBuoy,
+    live: true,
+    ownerOnly: false,
   },
   {
     key: "settings",
