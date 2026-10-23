@@ -1,7 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Lock, Megaphone, Pause, Pencil, Play, Send, Trash2, Users } from "lucide-react";
-import { useVenueGroup } from "@/lib/venueGroup";
+import {
+  Download,
+  FileText,
+  Loader2,
+  Lock,
+  Megaphone,
+  Paperclip,
+  Pause,
+  Pencil,
+  Play,
+  Send,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+import {
+  classifyAttachment,
+  formatFileSize,
+  useVenueGroup,
+  type VenueGroupMessage,
+} from "@/lib/venueGroup";
 import { useAuth } from "@/lib/auth";
 import { OwnerOnlyGuard } from "@/components/partner/OwnerOnlyGuard";
 import { Button } from "@/components/partner/Button";
@@ -138,6 +157,63 @@ function CreateGroupCard({
   );
 }
 
+/** JustPlay mark — the permanent DP of every venue group. */
+function JustPlayMark({ className = "h-10 w-10 text-xl" }: { className?: string }) {
+  return (
+    <span
+      aria-label="JustPlay"
+      className={`gradient-primary flex shrink-0 items-center justify-center rounded-full font-display text-primary-foreground ${className}`}
+    >
+      J
+    </span>
+  );
+}
+
+function MessageAttachment({ m, mine }: { m: VenueGroupMessage; mine: boolean }) {
+  if (m.type === "text") return null;
+  if (!m.mediaSrc) return <p className="text-xs italic opacity-70">Attachment unavailable</p>;
+  if (m.type === "image") {
+    return (
+      <a href={m.mediaSrc} target="_blank" rel="noreferrer">
+        <img
+          src={m.mediaSrc}
+          alt={m.fileName ?? "Photo"}
+          loading="lazy"
+          className="mb-1 max-h-64 w-full rounded-xl object-cover"
+        />
+      </a>
+    );
+  }
+  if (m.type === "video") {
+    return (
+      <video
+        src={m.mediaSrc}
+        controls
+        preload="metadata"
+        className="mb-1 max-h-64 w-full rounded-xl bg-black"
+      />
+    );
+  }
+  return (
+    <a
+      href={m.mediaSrc}
+      target="_blank"
+      rel="noreferrer"
+      download={m.fileName ?? undefined}
+      className={`mb-1 flex items-center gap-3 rounded-xl border p-2.5 ${
+        mine ? "border-primary-foreground/30" : "border-border bg-background"
+      }`}
+    >
+      <FileText className="h-8 w-8 shrink-0" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{m.fileName ?? "File"}</span>
+        <span className="block text-[11px] opacity-70">{formatFileSize(m.fileSize)}</span>
+      </span>
+      <Download className="h-4 w-4 shrink-0" />
+    </a>
+  );
+}
+
 function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
   const { group, memberCount, messages } = vg;
   const [editOpen, setEditOpen] = useState(false);
@@ -149,6 +225,8 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<File | null>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -171,12 +249,14 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
 
   const send = async () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text && !pending) return;
     setSending(true);
     setError(null);
     try {
-      await vg.sendMessage(text);
+      if (pending) await vg.sendAttachment(pending, text);
+      else await vg.sendMessage(text);
       setDraft("");
+      setPending(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't send that update.");
     } finally {
@@ -189,9 +269,12 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
       {/* Group card */}
       <div className="surface-card h-fit rounded-2xl p-5">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="font-display text-lg font-semibold leading-snug text-foreground">
-            {group.name}
-          </h2>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <JustPlayMark className="h-10 w-10 text-xl" />
+            <h2 className="font-display text-lg font-semibold leading-snug text-foreground">
+              {group.name}
+            </h2>
+          </div>
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
               group.isActive ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
@@ -331,6 +414,7 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
                           : "rounded-tl-sm bg-secondary text-foreground"
                       }`}
                     >
+                      <MessageAttachment m={m} mine={mine} />
                       {m.body}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -358,8 +442,45 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
 
         <div className="border-t border-border p-3">
           {error ? <p className="mb-2 text-xs text-destructive">{error}</p> : null}
+          {pending ? (
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-secondary px-3 py-2 text-xs">
+              <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate font-semibold">{pending.name}</span>
+              <span className="text-muted-foreground">{formatFileSize(pending.size)}</span>
+              <button type="button" aria-label="Remove attachment" onClick={() => setPending(null)}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
           {group.isActive ? (
             <div className="flex items-end gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  try {
+                    classifyAttachment(f);
+                    setError(null);
+                    setPending(f);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Can't attach that file.");
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                variant="outline"
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                aria-label="Attach photo, video or file"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               <textarea
                 value={draft}
                 rows={2}
@@ -371,13 +492,13 @@ function GroupConsole({ vg }: { vg: ReturnType<typeof useVenueGroup> }) {
                     void send();
                   }
                 }}
-                placeholder="Message your members…"
+                placeholder={pending ? "Add a caption…" : "Message your members…"}
                 className="min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
               />
               <Button
                 size="icon"
                 onClick={send}
-                disabled={!draft.trim() || sending}
+                disabled={(!draft.trim() && !pending) || sending}
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" />

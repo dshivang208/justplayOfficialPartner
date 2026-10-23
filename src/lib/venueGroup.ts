@@ -31,6 +31,10 @@ export type VenueGroupMessage = {
   /** "venue" = posted from this console; "member" = a player. */
   kind: "venue" | "member";
   senderName: string;
+  type: "text" | "image" | "video" | "file";
+  mediaSrc: string | null;
+  fileName: string | null;
+  fileSize: number | null;
 };
 
 type GroupRow = {
@@ -48,7 +52,57 @@ type MessageRow = {
   created_at: string;
   sender_user_id?: string | null;
   sender_kind?: "venue" | "member";
+  /** Absent until 20261023040000_venue_group_media.sql is applied. */
+  message_type?: "text" | "image" | "video" | "file";
+  media_path?: string | null;
+  file_name?: string | null;
+  file_size?: number | null;
 };
+
+const BUCKET = "venue-group-chat";
+const SIGNED_URL_TTL_S = 60 * 60;
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
+
+const FILE_TYPES = [
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
+
+export function classifyAttachment(file: File): "image" | "video" | "file" {
+  if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+    if (file.size > MAX_IMAGE_BYTES) throw new Error("Photos can be up to 10 MB.");
+    return "image";
+  }
+  if (["video/mp4", "video/webm", "video/quicktime"].includes(file.type)) {
+    if (file.size > MAX_MEDIA_BYTES) throw new Error("Videos can be up to 25 MB.");
+    return "video";
+  }
+  if (FILE_TYPES.includes(file.type)) {
+    if (file.size > MAX_MEDIA_BYTES) throw new Error("Files can be up to 25 MB.");
+    return "file";
+  }
+  throw new Error("Attach a photo, an MP4/WebM/MOV video, or a PDF/Office/text file.");
+}
+
+export function formatFileSize(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function extOf(file: File) {
+  const fromName = file.name.split(".").pop()?.toLowerCase();
+  if (fromName && /^[a-z0-9]{2,5}$/.test(fromName)) return fromName;
+  return file.type.split("/")[1] ?? "bin";
+}
 
 const toGroup = (r: GroupRow): VenueGroup => ({
   id: r.id,
@@ -59,8 +113,16 @@ const toGroup = (r: GroupRow): VenueGroup => ({
   createdAt: r.created_at,
 });
 
-const toMessage = (r: MessageRow, names: Record<string, string> = {}): VenueGroupMessage => ({
+const toMessage = (
+  r: MessageRow,
+  names: Record<string, string> = {},
+  signed: Record<string, string> = {},
+): VenueGroupMessage => ({
   id: r.id,
+  type: r.message_type ?? "text",
+  mediaSrc: r.media_path ? (signed[r.media_path] ?? null) : null,
+  fileName: r.file_name ?? null,
+  fileSize: r.file_size ?? null,
   body: r.body,
   createdAt: r.created_at,
   kind: r.sender_kind ?? "venue",
@@ -79,6 +141,7 @@ const ERROR_COPY: Record<string, string> = {
   GROUP_PAUSED: "The group is paused. Resume it to post updates.",
   NAME_REQUIRED: "Give the group a name (at least 2 characters).",
   MESSAGE_REQUIRED: "Write something to send.",
+  INVALID_MEDIA_PATH: "That attachment couldn't be sent. Try again.",
   MESSAGE_TOO_LONG: "Messages can be up to 1000 characters.",
   AUTH_REQUIRED: "Please sign in again.",
 };
@@ -100,28 +163,48 @@ export function useVenueGroup() {
 
   const fetchMessages = useCallback(async (groupId: string) => {
     let rows: MessageRow[];
-    const full = await supabase
+    const media = await supabase
       .from("venue_group_messages")
-      .select("id, body, created_at, sender_user_id, sender_kind")
+      .select(
+        "id, body, created_at, sender_user_id, sender_kind, message_type, media_path, file_name, file_size",
+      )
       .eq("group_id", groupId)
       .order("created_at", { ascending: true })
       .limit(300)
       .returns<MessageRow[]>();
-    if (full.error) {
-      // Two-way chat migration not applied yet — original columns only.
-      const legacy = await supabase
+    if (!media.error) {
+      rows = media.data ?? [];
+    } else {
+      const full = await supabase
         .from("venue_group_messages")
-        .select("id, body, created_at")
+        .select("id, body, created_at, sender_user_id, sender_kind")
         .eq("group_id", groupId)
         .order("created_at", { ascending: true })
-        .limit(300);
-      if (legacy.error) {
-        console.error("fetch venue group messages failed:", legacy.error.message);
-        return;
+        .limit(300)
+        .returns<MessageRow[]>();
+      if (!full.error) {
+        rows = full.data ?? [];
+      } else {
+        // Two-way chat migration not applied yet — original columns only.
+        const legacy = await supabase
+          .from("venue_group_messages")
+          .select("id, body, created_at")
+          .eq("group_id", groupId)
+          .order("created_at", { ascending: true })
+          .limit(300);
+        if (legacy.error) {
+          console.error("fetch venue group messages failed:", legacy.error.message);
+          return;
+        }
+        rows = (legacy.data ?? []) as MessageRow[];
       }
-      rows = (legacy.data ?? []) as MessageRow[];
-    } else {
-      rows = full.data ?? [];
+    }
+
+    const signed: Record<string, string> = {};
+    const paths = rows.map((r) => r.media_path).filter((x): x is string => Boolean(x));
+    if (paths.length > 0) {
+      const { data } = await supabase.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL_S);
+      for (const row of data ?? []) if (row.path && row.signedUrl) signed[row.path] = row.signedUrl;
     }
 
     const ids = Array.from(
@@ -132,7 +215,7 @@ export function useVenueGroup() {
       const { data } = await supabase.from("public_profiles").select("id, name").in("id", ids);
       for (const p of data ?? []) names[p.id] = p.name || "Player";
     }
-    setMessages(rows.map((r) => toMessage(r, names)));
+    setMessages(rows.map((r) => toMessage(r, names, signed)));
   }, []);
 
   const fetchMemberCount = useCallback(async (groupId: string) => {
@@ -302,6 +385,39 @@ export function useVenueGroup() {
     [group],
   );
 
+  const sendAttachment = useCallback(
+    async (file: File, caption: string) => {
+      if (!group) return;
+      const type = classifyAttachment(file);
+      const path = `${group.id}/${crypto.randomUUID()}.${extOf(file)}`;
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) {
+        throw new Error(
+          /bucket not found/i.test(upErr.message)
+            ? "Attachments aren't enabled yet — run the venue_group_media migration."
+            : "Couldn't upload that file. Try again.",
+        );
+      }
+      const { error } = await supabase.rpc("partner_send_venue_group_media", {
+        p_group_id: group.id,
+        p_type: type,
+        p_path: path,
+        p_file_name: file.name,
+        p_file_size: file.size,
+        p_mime_type: file.type,
+        p_body: caption,
+      });
+      if (error) {
+        await supabase.storage.from(BUCKET).remove([path]);
+        throw friendly(error.message);
+      }
+      await fetchMessages(group.id);
+    },
+    [group, fetchMessages],
+  );
+
   const deleteMessage = useCallback(async (messageId: string) => {
     const { error } = await supabase.rpc("partner_delete_venue_group_message", {
       p_message_id: messageId,
@@ -322,6 +438,7 @@ export function useVenueGroup() {
     setMembersCanPost,
     deleteGroup,
     sendMessage,
+    sendAttachment,
     deleteMessage,
     refresh,
   };
