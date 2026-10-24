@@ -13,7 +13,12 @@ import {
 import { useInventory } from "@/lib/inventory";
 import { Button } from "@/components/partner/Button";
 import { PillTabs } from "@/components/partner/PillTabs";
-import { CalendarLegend, DailyCalendar, WeeklyCalendar } from "@/components/partner/SlotCalendar";
+import {
+  CalendarLegend,
+  DailyCalendar,
+  MobileWeekCalendar,
+  WeeklyCalendar,
+} from "@/components/partner/SlotCalendar";
 import { SlotActionModal } from "@/components/partner/SlotActionModal";
 import {
   addDays,
@@ -161,7 +166,7 @@ function CalendarPage() {
   const needsSetup = selectedCourt && !selectedCourt.opensAt;
 
   return (
-    <div>
+    <div className={pendingSelection.length > 0 ? "pb-20" : ""}>
       <div className="flex flex-wrap items-center gap-3">
         {courts.length > 1 ? (
           <PillTabs
@@ -175,7 +180,7 @@ function CalendarPage() {
           </span>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2 max-sm:w-full sm:ml-auto">
           <PillTabs
             options={[
               { key: "week", label: "Week" },
@@ -207,35 +212,37 @@ function CalendarPage() {
         </div>
       ) : (
         <>
-          <div className="mt-5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => step(-1)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary sm:h-8 sm:w-8"
                 aria-label="Previous"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => step(1)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary sm:h-8 sm:w-8"
                 aria-label="Next"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
-              <span className="ml-1 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                {view === "week"
-                  ? weekRangeLabel(weekStart)
-                  : anchor.toLocaleDateString("en-IN", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    })}
+              <span className="ml-1 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-foreground">
+                <CalendarDays className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
+                <span className="truncate">
+                  {view === "week"
+                    ? weekRangeLabel(weekStart)
+                    : anchor.toLocaleDateString("en-IN", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })}
+                </span>
               </span>
               <button
                 onClick={() => setAnchor(new Date())}
-                className="ml-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
+                className="ml-auto rounded-lg px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/10 sm:ml-1"
               >
                 Today
               </button>
@@ -245,24 +252,36 @@ function CalendarPage() {
           </div>
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Click an available slot to select it, then click the next one to extend a run &mdash;
+            Tap an available slot to select it, then tap the next one to extend a run &mdash;
             handy for a walk-in booking or block spanning more than one slot.
           </p>
 
-          <div className="surface-card relative mt-4 rounded-2xl p-4 sm:p-5">
+          <div className="surface-card relative mt-4 rounded-2xl p-3 sm:p-5">
             {slotsLoading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-surface/70">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             )}
             {view === "week" ? (
-              <WeeklyCalendar
-                court={selectedCourt!}
-                slots={slots}
-                weekStart={weekStart}
-                isSelected={isSlotSelected}
-                onSlotClick={handleSlotClick}
-              />
+              <>
+                <div className="hidden sm:block">
+                  <WeeklyCalendar
+                    court={selectedCourt!}
+                    slots={slots}
+                    weekStart={weekStart}
+                    isSelected={isSlotSelected}
+                    onSlotClick={handleSlotClick}
+                  />
+                </div>
+                <div className="sm:hidden">
+                  <MobileWeekCalendar
+                    slots={slots}
+                    weekStart={weekStart}
+                    isSelected={isSlotSelected}
+                    onSlotClick={handleSlotClick}
+                  />
+                </div>
+              </>
             ) : (
               <DailyCalendar
                 slots={slots}

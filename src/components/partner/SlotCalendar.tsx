@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Lock, User } from "lucide-react";
 import {
   courtTimeRows,
@@ -41,7 +41,7 @@ export function CalendarLegend() {
     { status: "past", label: "Past" },
   ];
   return (
-    <div className="flex flex-wrap items-center gap-4">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
       {items.map((it) => (
         <div key={it.status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
@@ -213,6 +213,115 @@ export function DailyCalendar({
           </button>
         );
       })}
+    </div>
+  );
+}
+/**
+ * Phone-friendly week view: a strip of the 7 days to pick from, then that
+ * day's slots as a two-column grid of tappable tiles (time + price/status).
+ * Selection and click handling are identical to the desktop grid.
+ */
+export function MobileWeekCalendar({
+  slots,
+  weekStart,
+  isSelected,
+  onSlotClick,
+}: {
+  slots: RealSlot[];
+  weekStart: Date;
+  isSelected: (slot: RealSlot) => boolean;
+  onSlotClick: (slot: RealSlot) => void;
+}) {
+  const days = useMemo(() => weekDates(weekStart), [weekStart]);
+  const [dayIso, setDayIso] = useState(() => iso(new Date()));
+
+  // Keep the chosen day inside the visible week (today if present, else Monday).
+  useEffect(() => {
+    if (days.some((d) => iso(d) === dayIso)) return;
+    const today = days.find(isToday);
+    setDayIso(iso(today ?? days[0]!));
+  }, [days, dayIso]);
+
+  const daySlots = useMemo(
+    () => slots.filter((s) => s.date === dayIso).sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [slots, dayIso],
+  );
+
+  const countFor = (d: Date) =>
+    slots.filter((s) => s.date === iso(d) && s.status === "available").length;
+
+  return (
+    <div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((d) => {
+          const active = iso(d) === dayIso;
+          const free = countFor(d);
+          return (
+            <button
+              key={iso(d)}
+              onClick={() => setDayIso(iso(d))}
+              className={`flex flex-col items-center rounded-xl border py-1.5 transition-colors ${
+                active
+                  ? "border-primary bg-primary/10"
+                  : isToday(d)
+                    ? "border-primary/30"
+                    : "border-border"
+              }`}
+            >
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground">
+                {dayLabel(d).slice(0, 3)}
+              </span>
+              <span className={`text-sm font-bold ${active ? "text-primary" : "text-foreground"}`}>
+                {dayNumber(d)}
+              </span>
+              <span
+                className={`mt-0.5 h-1 w-1 rounded-full ${free > 0 ? "bg-primary" : "bg-transparent"}`}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {daySlots.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">No slots on this day.</p>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {daySlots.map((slot) => {
+            const clickable = slot.status !== "past";
+            const selected = isSelected(slot);
+            return (
+              <button
+                key={slot.id}
+                disabled={!clickable}
+                onClick={() => clickable && onSlotClick(slot)}
+                className={`flex flex-col items-start rounded-xl px-3 py-2 text-left transition-colors ${STATUS_STYLES[slot.status]} ${
+                  selected ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
+                }`}
+              >
+                <span className="flex w-full items-center justify-between text-xs font-semibold text-foreground">
+                  {formatTimeLabel(slot.startTime)}
+                  {selected && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold">
+                  {slot.status === "booked" ? (
+                    <>
+                      <User className="h-3 w-3" /> Booked
+                    </>
+                  ) : slot.status === "blocked" ? (
+                    <>
+                      <Lock className="h-3 w-3" /> Blocked
+                    </>
+                  ) : slot.status === "past" ? (
+                    "Past"
+                  ) : (
+                    `₹${slot.price.toLocaleString("en-IN")}`
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

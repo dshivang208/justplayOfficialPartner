@@ -193,7 +193,7 @@ function BulkSetupPage() {
   if (done) {
     const court = courts.find((c) => c.id === effectiveCourtId);
     return (
-      <div className="surface-card mx-auto max-w-lg rounded-2xl p-8 text-center">
+      <div className="surface-card mx-auto max-w-lg rounded-2xl p-5 text-center sm:p-8">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
           <CheckCircle2 className="h-6 w-6 text-primary" />
         </div>
@@ -203,7 +203,7 @@ function BulkSetupPage() {
           <strong className="text-foreground">{court?.name}</strong> through{" "}
           {endDate.toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.
         </p>
-        <div className="mt-6 flex justify-center gap-2">
+        <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
           <Button
             variant="outline"
             onClick={() => window.location.assign("/dashboard/slots/setup")}
@@ -225,9 +225,9 @@ function BulkSetupPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-5 flex items-center gap-1.5 sm:mb-6 sm:gap-2">
         {STEPS.map((label, i) => (
-          <div key={label} className="flex items-center gap-2">
+          <div key={label} className="flex items-center gap-1.5 sm:gap-2">
             <div
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                 i < step
@@ -240,16 +240,16 @@ function BulkSetupPage() {
               {i < step ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
             </div>
             <span
-              className={`text-xs font-semibold ${i === step ? "text-foreground" : "text-muted-foreground"}`}
+              className={`text-xs font-semibold ${i === step ? "text-foreground" : "hidden text-muted-foreground sm:inline"}`}
             >
               {label}
             </span>
-            {i < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-border" />}
+            {i < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-border" />}
           </div>
         ))}
       </div>
 
-      <div className="surface-card max-w-xl rounded-2xl p-6">
+      <div className="surface-card max-w-xl rounded-2xl p-4 sm:p-6">
         {/* Step 0: court */}
         {step === 0 && (
           <div>
@@ -336,7 +336,7 @@ function BulkSetupPage() {
               slots.
             </p>
 
-            <div className="mt-5 grid grid-cols-2 gap-4">
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
               <label className="block">
                 <span className="mb-1.5 block text-sm font-semibold text-foreground">Opens at</span>
                 <input
@@ -385,12 +385,12 @@ function BulkSetupPage() {
               <span className="mb-1.5 block text-sm font-semibold text-foreground">
                 Slot duration
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {DURATION_OPTIONS.map((d) => (
                   <button
                     key={d}
                     onClick={() => setDuration(d)}
-                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                    className={`min-w-[4.5rem] flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
                       duration === d
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-muted-foreground"
@@ -441,20 +441,20 @@ function BulkSetupPage() {
                       </button>
                     )}
                   </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     <input
                       type="time"
                       value={b.startTime}
                       onChange={(e) => updateBand(b.id, { startTime: e.target.value })}
-                      className="rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-foreground outline-none focus:border-primary"
+                      className="min-w-0 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-foreground outline-none focus:border-primary"
                     />
                     <input
                       type="time"
                       value={b.endTime}
                       onChange={(e) => updateBand(b.id, { endTime: e.target.value })}
-                      className="rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-foreground outline-none focus:border-primary"
+                      className="min-w-0 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-foreground outline-none focus:border-primary"
                     />
-                    <div className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-2">
+                    <div className="col-span-2 flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-2 sm:col-span-1">
                       <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
                       <input
                         type="number"
@@ -491,7 +491,7 @@ function BulkSetupPage() {
               Choose how far ahead to open up availability.
             </p>
 
-            <div className="mt-5 grid grid-cols-4 gap-2">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {QUICK_RANGES.map((n) => (
                 <button
                   key={n}
@@ -536,7 +536,7 @@ function BulkSetupPage() {
           </div>
         )}
 
-        <div className="mt-7 flex justify-between gap-2">
+        <div className="mt-6 flex justify-between gap-2 sm:mt-7">
           <Button
             variant="outline"
             onClick={() => setStep((s) => Math.max(0, s - 1))}

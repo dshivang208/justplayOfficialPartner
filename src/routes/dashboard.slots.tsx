@@ -25,14 +25,14 @@ function SlotsLayout() {
         </p>
       </div>
 
-      <div className="mt-5 flex gap-1 border-b border-border">
+      <div className="no-scrollbar -mx-4 mt-5 flex gap-1 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SECTIONS.map((s) => {
           const active = location.pathname === s.to;
           return (
             <Link
               key={s.to}
               to={s.to}
-              className={`border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+              className={`shrink-0 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
                 active
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -44,7 +44,7 @@ function SlotsLayout() {
         })}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-5 sm:mt-6">
         <Outlet />
       </div>
     </div>
