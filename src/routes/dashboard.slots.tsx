@@ -25,7 +25,7 @@ function SlotsLayout() {
         </p>
       </div>
 
-      <div className="no-scrollbar -mx-4 mt-5 flex gap-1 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="no-scrollbar -mx-5 mt-5 flex gap-1 overflow-x-auto border-b border-border px-5 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SECTIONS.map((s) => {
           const active = location.pathname === s.to;
           return (
