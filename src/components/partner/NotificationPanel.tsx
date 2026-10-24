@@ -53,7 +53,7 @@ function groupLabel(iso: string) {
 export function NotificationPanel({
   onNavigate,
   header,
-  maxHeightClass = "max-h-[26rem]",
+  maxHeightClass = "max-h-[min(26rem,60vh)]",
 }: {
   onNavigate?: () => void;
   /** Extra content above the list (e.g. the "needs attention" alerts). */

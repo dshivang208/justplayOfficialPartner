@@ -130,13 +130,25 @@ export function PartnerNotificationsProvider({ children }: { children: ReactNode
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    void supabase.rpc("mark_partner_notification_read", { p_id: id });
-  }, []);
+    // supabase-js builders are lazy: the request is only sent once .then() is
+    // called, so a bare `void supabase.rpc(...)` never reaches the server.
+    void supabase.rpc("mark_partner_notification_read", { p_id: id }).then(({ error }) => {
+      if (error) {
+        console.error("mark notification read failed:", error.message);
+        void refresh(); // roll the optimistic change back to the server's truth
+      }
+    });
+  }, [refresh]);
 
   const markAllAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    void supabase.rpc("mark_all_partner_notifications_read");
-  }, []);
+    void supabase.rpc("mark_all_partner_notifications_read").then(({ error }) => {
+      if (error) {
+        console.error("mark all notifications read failed:", error.message);
+        void refresh();
+      }
+    });
+  }, [refresh]);
 
   const value = useMemo<Ctx>(
     () => ({

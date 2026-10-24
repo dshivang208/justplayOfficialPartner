@@ -265,7 +265,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 )}
               </button>
               {notificationsOpen && (
-                <div className="absolute right-0 top-11 w-[24rem] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+                <div className="fixed inset-x-3 top-16 z-50 overflow-hidden rounded-2xl border border-border bg-surface shadow-card sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[24rem]">
                   <NotificationPanel
                     onNavigate={() => setNotificationsOpen(false)}
                     header={
@@ -314,7 +314,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
               {profileOpen && (
-                <div className="absolute right-0 top-11 w-64 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                <div className="absolute right-0 top-11 z-50 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
                   <div className="border-b border-border px-3.5 py-2.5">
                     <p className="text-sm font-semibold text-foreground">{partner.ownerName}</p>
                     <p className="text-xs text-muted-foreground">{partner.businessName}</p>
