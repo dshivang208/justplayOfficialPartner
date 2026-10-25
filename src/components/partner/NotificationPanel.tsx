@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BellOff,
+  BellRing,
   Building2,
   CalendarCheck,
   CalendarX2,
@@ -15,6 +16,7 @@ import {
   type NotificationKind,
   type PartnerNotification,
 } from "@/lib/partnerNotifications";
+import { usePush } from "@/lib/usePush";
 
 const ICONS: Record<NotificationKind, { icon: ReactNode; tone: string }> = {
   new_booking: { icon: <CalendarCheck className="h-4 w-4" />, tone: "bg-primary/10 text-primary" },
@@ -63,6 +65,7 @@ export function NotificationPanel({
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = usePartnerNotifications();
   const [tab, setTab] = useState<"all" | "unread">("all");
+  const push = usePush("partner");
 
   const grouped = useMemo(() => {
     const list = tab === "unread" ? notifications.filter((n) => !n.read) : notifications;
@@ -184,6 +187,35 @@ export function NotificationPanel({
             </section>
           ))
         )}
+      </div>
+
+      <div className="border-t border-border px-4 py-2.5">
+        {push.state === "enabled" ? (
+          <button
+            type="button"
+            disabled={push.busy}
+            onClick={() => void push.disable()}
+            className="text-xs font-semibold text-muted-foreground hover:text-destructive"
+          >
+            Turn off push notifications on this device
+          </button>
+        ) : push.state === "default" ? (
+          <button
+            type="button"
+            disabled={push.busy}
+            onClick={() => void push.enable()}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+          >
+            <BellRing className="h-3.5 w-3.5" /> Enable push notifications on this device
+          </button>
+        ) : push.state === "denied" ? (
+          <p className="text-xs text-muted-foreground">
+            Notifications are blocked for this site — allow them in your browser settings to get alerts.
+          </p>
+        ) : push.state === "unsupported" && push.unsupportedReason ? (
+          <p className="text-xs text-muted-foreground">{push.unsupportedReason}</p>
+        ) : null}
+        {push.error ? <p className="mt-1 text-xs text-destructive">{push.error}</p> : null}
       </div>
     </div>
   );

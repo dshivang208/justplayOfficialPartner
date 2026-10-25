@@ -18,6 +18,7 @@ import {
 } from "react";
 import { supabase } from "./supabaseClient";
 import { useAuth } from "./auth";
+import { onForegroundPush, refreshPushToken } from "./push";
 
 export type NotificationKind =
   | "new_booking"
@@ -125,6 +126,23 @@ export function PartnerNotificationsProvider({ children }: { children: ReactNode
       clearInterval(poll);
       window.removeEventListener("focus", onFocus);
       void supabase.removeChannel(channel);
+    };
+  }, [partnerId, refresh]);
+
+  // Already allowed notifications? Keep this browser's token on the account,
+  // and refresh the bell the moment a push lands while the dashboard is open.
+  useEffect(() => {
+    if (!partnerId) return;
+    void refreshPushToken("partner");
+    let off: (() => void) | undefined;
+    let cancelled = false;
+    void onForegroundPush(() => void refresh()).then((u) => {
+      if (cancelled) u();
+      else off = u;
+    });
+    return () => {
+      cancelled = true;
+      off?.();
     };
   }, [partnerId, refresh]);
 
