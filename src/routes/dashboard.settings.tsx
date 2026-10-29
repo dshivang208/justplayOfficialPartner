@@ -7,6 +7,7 @@ export const Route = createFileRoute("/dashboard/settings")({
 
 const SECTIONS = [
   { to: "/dashboard/settings", label: "Venue Profile" },
+  { to: "/dashboard/settings/qr", label: "QR Code" },
   { to: "/dashboard/settings/staff", label: "Staff" },
   { to: "/dashboard/settings/notifications", label: "Notifications" },
   { to: "/dashboard/settings/account", label: "Account" },

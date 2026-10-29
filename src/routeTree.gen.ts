@@ -27,6 +27,7 @@ import { Route as DashboardPayoutsSettingsRouteImport } from './routes/dashboard
 import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard.settings.index'
 import { Route as DashboardSettingsAccountRouteImport } from './routes/dashboard.settings.account'
 import { Route as DashboardSettingsNotificationsRouteImport } from './routes/dashboard.settings.notifications'
+import { Route as DashboardSettingsQrRouteImport } from './routes/dashboard.settings.qr'
 import { Route as DashboardSettingsStaffRouteImport } from './routes/dashboard.settings.staff'
 import { Route as DashboardSlotsIndexRouteImport } from './routes/dashboard.slots.index'
 import { Route as DashboardSlotsCourtsRouteImport } from './routes/dashboard.slots.courts'
@@ -128,6 +129,11 @@ const DashboardSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => DashboardSettingsRoute,
   } as any)
+const DashboardSettingsQrRoute = DashboardSettingsQrRouteImport.update({
+  id: '/qr',
+  path: '/qr',
+  getParentRoute: () => DashboardSettingsRoute,
+} as any)
 const DashboardSettingsStaffRoute = DashboardSettingsStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/payouts/settings': typeof DashboardPayoutsSettingsRoute
   '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
   '/dashboard/settings/notifications': typeof DashboardSettingsNotificationsRoute
+  '/dashboard/settings/qr': typeof DashboardSettingsQrRoute
   '/dashboard/settings/staff': typeof DashboardSettingsStaffRoute
   '/dashboard/slots/courts': typeof DashboardSlotsCourtsRoute
   '/dashboard/slots/setup': typeof DashboardSlotsSetupRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/dashboard/payouts/settings': typeof DashboardPayoutsSettingsRoute
   '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
   '/dashboard/settings/notifications': typeof DashboardSettingsNotificationsRoute
+  '/dashboard/settings/qr': typeof DashboardSettingsQrRoute
   '/dashboard/settings/staff': typeof DashboardSettingsStaffRoute
   '/dashboard/slots/courts': typeof DashboardSlotsCourtsRoute
   '/dashboard/slots/setup': typeof DashboardSlotsSetupRoute
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/dashboard/payouts/settings': typeof DashboardPayoutsSettingsRoute
   '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
   '/dashboard/settings/notifications': typeof DashboardSettingsNotificationsRoute
+  '/dashboard/settings/qr': typeof DashboardSettingsQrRoute
   '/dashboard/settings/staff': typeof DashboardSettingsStaffRoute
   '/dashboard/slots/courts': typeof DashboardSlotsCourtsRoute
   '/dashboard/slots/setup': typeof DashboardSlotsSetupRoute
@@ -252,6 +261,7 @@ export interface FileRouteTypes {
     | '/dashboard/payouts/settings'
     | '/dashboard/settings/account'
     | '/dashboard/settings/notifications'
+    | '/dashboard/settings/qr'
     | '/dashboard/settings/staff'
     | '/dashboard/slots/courts'
     | '/dashboard/slots/setup'
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | '/dashboard/payouts/settings'
     | '/dashboard/settings/account'
     | '/dashboard/settings/notifications'
+    | '/dashboard/settings/qr'
     | '/dashboard/settings/staff'
     | '/dashboard/slots/courts'
     | '/dashboard/slots/setup'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/dashboard/payouts/settings'
     | '/dashboard/settings/account'
     | '/dashboard/settings/notifications'
+    | '/dashboard/settings/qr'
     | '/dashboard/settings/staff'
     | '/dashboard/slots/courts'
     | '/dashboard/slots/setup'
@@ -444,6 +456,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSettingsNotificationsRouteImport
       parentRoute: typeof DashboardSettingsRoute
     }
+    '/dashboard/settings/qr': {
+      id: '/dashboard/settings/qr'
+      path: '/qr'
+      fullPath: '/dashboard/settings/qr'
+      preLoaderRoute: typeof DashboardSettingsQrRouteImport
+      parentRoute: typeof DashboardSettingsRoute
+    }
     '/dashboard/settings/staff': {
       id: '/dashboard/settings/staff'
       path: '/staff'
@@ -520,6 +539,7 @@ const DashboardPayoutsRouteWithChildren =
 interface DashboardSettingsRouteChildren {
   DashboardSettingsAccountRoute: typeof DashboardSettingsAccountRoute
   DashboardSettingsNotificationsRoute: typeof DashboardSettingsNotificationsRoute
+  DashboardSettingsQrRoute: typeof DashboardSettingsQrRoute
   DashboardSettingsStaffRoute: typeof DashboardSettingsStaffRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
 }
@@ -527,6 +547,7 @@ interface DashboardSettingsRouteChildren {
 const DashboardSettingsRouteChildren: DashboardSettingsRouteChildren = {
   DashboardSettingsAccountRoute: DashboardSettingsAccountRoute,
   DashboardSettingsNotificationsRoute: DashboardSettingsNotificationsRoute,
+  DashboardSettingsQrRoute: DashboardSettingsQrRoute,
   DashboardSettingsStaffRoute: DashboardSettingsStaffRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
 }
