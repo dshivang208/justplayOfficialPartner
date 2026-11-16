@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Landmark, Loader2, Smartphone } from "lucide-react";
+import { Download, Landmark, Loader2, Smartphone } from "lucide-react";
 import { usePayouts } from "@/lib/payouts";
 import { formatINR } from "@/data/dashboard";
 import { formatBookingId } from "@/data/bookings";
 import { statusLabel, type PayoutBatch, type PayoutStatus } from "@/data/payouts";
 import { Modal } from "@/components/partner/Modal";
+import { Button } from "@/components/partner/Button";
 
 export const Route = createFileRoute("/dashboard/payouts/history")({
   head: () => ({ meta: [{ title: "Payout History | JustPlay Partner" }] }),
@@ -25,6 +26,63 @@ function StatusBadge({ status }: { status: PayoutStatus }) {
       {statusLabel(status)}
     </span>
   );
+}
+
+// Spreadsheet formula-injection guard: booking labels are user-derived text.
+function csvCell(v: string | number) {
+  let t = String(v);
+  if (/^[=+\-@\t\r]/.test(t) && typeof v === "string") t = `'${t}`;
+  return `"${t.replace(/"/g, '""')}"`;
+}
+
+function exportPayoutsCsv(batches: PayoutBatch[]) {
+  const headers = [
+    "Payout date",
+    "Payout ID",
+    "Status",
+    "Method",
+    "Booking ID",
+    "Booking",
+    "Booking date",
+    "Gross amount (INR)",
+    "Net amount (INR)",
+    "Batch total (INR)",
+  ];
+  const rows: (string | number)[][] = [];
+  for (const b of batches) {
+    const common = [
+      b.date,
+      b.id,
+      statusLabel(b.status),
+      b.method === "bank" ? "Bank transfer" : "UPI",
+    ];
+    if (b.lineItems.length === 0) {
+      rows.push([...common, "", "", "", "", "", b.amount]);
+      continue;
+    }
+    for (const li of b.lineItems) {
+      rows.push([
+        ...common,
+        formatBookingId(li.bookingId),
+        li.bookingLabel,
+        li.date,
+        li.grossAmount,
+        li.netAmount,
+        b.amount,
+      ]);
+    }
+  }
+  const csv = [headers, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n");
+  // BOM so Excel opens it as UTF-8.
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `justplay-payout-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function PayoutHistoryPage() {
@@ -54,6 +112,11 @@ function PayoutHistoryPage() {
 
   return (
     <div>
+      <div className="mb-3 flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => exportPayoutsCsv(sorted)}>
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
+      </div>
       <div className="surface-card overflow-x-auto rounded-2xl">
         <table className="w-full min-w-[640px] text-left">
           <thead>
