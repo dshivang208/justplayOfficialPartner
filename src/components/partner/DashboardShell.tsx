@@ -15,6 +15,9 @@ import {
   X,
   ShieldCheck,
   LifeBuoy,
+  BarChart3,
+  Star,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "./Logo";
@@ -26,7 +29,7 @@ import { buildDashboardAlerts } from "@/lib/alerts";
 import { usePartnerNotifications } from "@/lib/partnerNotifications";
 import { NotificationPanel } from "./NotificationPanel";
 
-export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "notifications" | "support" | "settings";
+export type NavKey = "dashboard" | "slots" | "bookings" | "community" | "payouts" | "analytics" | "reviews" | "offers" | "notifications" | "support" | "settings";
 
 export const NAV_ITEMS: {
   key: NavKey;
@@ -75,6 +78,30 @@ export const NAV_ITEMS: {
     label: "Payouts",
     to: "/dashboard/payouts",
     icon: Wallet,
+    live: true,
+    ownerOnly: true,
+  },
+  {
+    key: "analytics",
+    label: "Analytics",
+    to: "/dashboard/analytics",
+    icon: BarChart3,
+    live: true,
+    ownerOnly: true,
+  },
+  {
+    key: "reviews",
+    label: "Reviews",
+    to: "/dashboard/reviews",
+    icon: Star,
+    live: true,
+    ownerOnly: true,
+  },
+  {
+    key: "offers",
+    label: "Offers",
+    to: "/dashboard/offers",
+    icon: Tag,
     live: true,
     ownerOnly: true,
   },

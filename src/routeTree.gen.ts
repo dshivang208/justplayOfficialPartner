@@ -13,10 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as PendingRouteImport } from './routes/pending'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
 import { Route as DashboardBookingsRouteImport } from './routes/dashboard.bookings'
 import { Route as DashboardCommunityRouteImport } from './routes/dashboard.community'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
+import { Route as DashboardOffersRouteImport } from './routes/dashboard.offers'
 import { Route as DashboardPayoutsRouteImport } from './routes/dashboard.payouts'
+import { Route as DashboardReviewsRouteImport } from './routes/dashboard.reviews'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardSlotsRouteImport } from './routes/dashboard.slots'
 import { Route as DashboardBookingsIndexRouteImport } from './routes/dashboard.bookings.index'
@@ -55,6 +58,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAnalyticsRoute = DashboardAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardBookingsRoute = DashboardBookingsRouteImport.update({
   id: '/bookings',
   path: '/bookings',
@@ -70,9 +78,19 @@ const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardOffersRoute = DashboardOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardPayoutsRoute = DashboardPayoutsRouteImport.update({
   id: '/payouts',
   path: '/payouts',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardReviewsRoute = DashboardReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
@@ -170,10 +188,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/pending': typeof PendingRoute
+  '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/bookings': typeof DashboardBookingsRouteWithChildren
   '/dashboard/community': typeof DashboardCommunityRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/offers': typeof DashboardOffersRoute
   '/dashboard/payouts': typeof DashboardPayoutsRouteWithChildren
+  '/dashboard/reviews': typeof DashboardReviewsRoute
   '/dashboard/settings': typeof DashboardSettingsRouteWithChildren
   '/dashboard/slots': typeof DashboardSlotsRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
@@ -196,8 +217,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/pending': typeof PendingRoute
+  '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/community': typeof DashboardCommunityRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/offers': typeof DashboardOffersRoute
+  '/dashboard/reviews': typeof DashboardReviewsRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/bookings/$bookingId': typeof DashboardBookingsBookingIdRoute
   '/dashboard/payouts/history': typeof DashboardPayoutsHistoryRoute
@@ -220,10 +244,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/pending': typeof PendingRoute
+  '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/bookings': typeof DashboardBookingsRouteWithChildren
   '/dashboard/community': typeof DashboardCommunityRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/offers': typeof DashboardOffersRoute
   '/dashboard/payouts': typeof DashboardPayoutsRouteWithChildren
+  '/dashboard/reviews': typeof DashboardReviewsRoute
   '/dashboard/settings': typeof DashboardSettingsRouteWithChildren
   '/dashboard/slots': typeof DashboardSlotsRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
@@ -249,10 +276,13 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/pending'
+    | '/dashboard/analytics'
     | '/dashboard/bookings'
     | '/dashboard/community'
     | '/dashboard/notifications'
+    | '/dashboard/offers'
     | '/dashboard/payouts'
+    | '/dashboard/reviews'
     | '/dashboard/settings'
     | '/dashboard/slots'
     | '/dashboard/'
@@ -275,8 +305,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/pending'
+    | '/dashboard/analytics'
     | '/dashboard/community'
     | '/dashboard/notifications'
+    | '/dashboard/offers'
+    | '/dashboard/reviews'
     | '/dashboard'
     | '/dashboard/bookings/$bookingId'
     | '/dashboard/payouts/history'
@@ -298,10 +331,13 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/pending'
+    | '/dashboard/analytics'
     | '/dashboard/bookings'
     | '/dashboard/community'
     | '/dashboard/notifications'
+    | '/dashboard/offers'
     | '/dashboard/payouts'
+    | '/dashboard/reviews'
     | '/dashboard/settings'
     | '/dashboard/slots'
     | '/dashboard/'
@@ -358,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/analytics': {
+      id: '/dashboard/analytics'
+      path: '/analytics'
+      fullPath: '/dashboard/analytics'
+      preLoaderRoute: typeof DashboardAnalyticsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/bookings': {
       id: '/dashboard/bookings'
       path: '/bookings'
@@ -379,11 +422,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNotificationsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/offers': {
+      id: '/dashboard/offers'
+      path: '/offers'
+      fullPath: '/dashboard/offers'
+      preLoaderRoute: typeof DashboardOffersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/payouts': {
       id: '/dashboard/payouts'
       path: '/payouts'
       fullPath: '/dashboard/payouts'
       preLoaderRoute: typeof DashboardPayoutsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/reviews': {
+      id: '/dashboard/reviews'
+      path: '/reviews'
+      fullPath: '/dashboard/reviews'
+      preLoaderRoute: typeof DashboardReviewsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/settings': {
@@ -572,10 +629,13 @@ const DashboardSlotsRouteWithChildren = DashboardSlotsRoute._addFileChildren(
 )
 
 interface DashboardRouteChildren {
+  DashboardAnalyticsRoute: typeof DashboardAnalyticsRoute
   DashboardBookingsRoute: typeof DashboardBookingsRouteWithChildren
   DashboardCommunityRoute: typeof DashboardCommunityRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardOffersRoute: typeof DashboardOffersRoute
   DashboardPayoutsRoute: typeof DashboardPayoutsRouteWithChildren
+  DashboardReviewsRoute: typeof DashboardReviewsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRouteWithChildren
   DashboardSlotsRoute: typeof DashboardSlotsRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -584,10 +644,13 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAnalyticsRoute: DashboardAnalyticsRoute,
   DashboardBookingsRoute: DashboardBookingsRouteWithChildren,
   DashboardCommunityRoute: DashboardCommunityRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardOffersRoute: DashboardOffersRoute,
   DashboardPayoutsRoute: DashboardPayoutsRouteWithChildren,
+  DashboardReviewsRoute: DashboardReviewsRoute,
   DashboardSettingsRoute: DashboardSettingsRouteWithChildren,
   DashboardSlotsRoute: DashboardSlotsRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
