@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, LogOut, PauseCircle, PlayCircle, Receipt, Smartphone } from "lucide-react";
+import { AlertTriangle, LogOut, User, PauseCircle, PlayCircle, Receipt, Smartphone } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabaseClient";
 import { useVenueProfile } from "@/lib/venueProfile";
 import { Button } from "@/components/partner/Button";
 import { Modal } from "@/components/partner/Modal";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/dashboard/settings/account")({
 });
 
 function AccountPage() {
-  const { partner, logout } = useAuth();
+  const { partner, logout, refreshPartnerContext } = useAuth();
   const { profile, updateBusinessDetails, toggleOperationalStatus } = useVenueProfile();
   const navigate = useNavigate();
 
@@ -23,11 +24,43 @@ function AccountPage() {
   const [businessSaving, setBusinessSaving] = useState(false);
   const [businessError, setBusinessError] = useState<string | null>(null);
 
+  const [ownerName, setOwnerName] = useState(partner?.ownerName ?? "");
+  const [ownerSaving, setOwnerSaving] = useState(false);
+  const [ownerMsg, setOwnerMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   const [statusBusy, setStatusBusy] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
 
   if (!partner) return null;
+
+  const ownerClean = ownerName.trim().replace(/\s+/g, " ");
+  const ownerDirty = ownerClean !== partner.ownerName;
+  const handleSaveOwner = async () => {
+    if (ownerClean.length < 2 || ownerClean.length > 80) {
+      setOwnerMsg({ ok: false, text: "Enter your full name (2\u201380 characters)." });
+      return;
+    }
+    setOwnerSaving(true);
+    setOwnerMsg(null);
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .update({ owner_name: ownerClean })
+        .eq("id", partner.id)
+        .select("owner_name")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("Could not update your name. Try again.");
+      await refreshPartnerContext();
+      setOwnerName(ownerClean);
+      setOwnerMsg({ ok: true, text: "Name updated. The JustPlay team will see the new name too." });
+    } catch (e) {
+      setOwnerMsg({ ok: false, text: e instanceof Error ? e.message : "Could not update your name." });
+    } finally {
+      setOwnerSaving(false);
+    }
+  };
 
   const handleSaveBusinessDetails = async () => {
     setBusinessSaving(true);
@@ -59,6 +92,40 @@ function AccountPage() {
 
   return (
     <div className="flex max-w-xl flex-col gap-5">
+      <div className="surface-card rounded-2xl p-5">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+          <User className="h-4 w-4 text-muted-foreground" /> Owner name
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Shown in your dashboard and to the JustPlay team.
+        </p>
+        <div className="mt-4 flex flex-col gap-4">
+          <TextInput
+            label="Your full name"
+            value={ownerName}
+            maxLength={80}
+            onChange={(e) => {
+              setOwnerName(e.target.value);
+              setOwnerMsg(null);
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="self-start"
+            disabled={!ownerDirty || ownerSaving}
+            onClick={handleSaveOwner}
+          >
+            {ownerSaving ? "Saving\u2026" : ownerDirty ? "Save name" : "Saved"}
+          </Button>
+          {ownerMsg && (
+            <p className={"text-xs font-medium " + (ownerMsg.ok ? "text-primary" : "text-destructive")}>
+              {ownerMsg.text}
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="surface-card rounded-2xl p-5">
         <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
           <Receipt className="h-4 w-4 text-muted-foreground" /> Business details
